@@ -85,25 +85,30 @@ function parseCSVLean(text) {
 
 async function fetchStore(storeKey) {
   const { gid, label } = STORES[storeKey];
+  const t0 = Date.now();
   console.log(`[cache] Fetching ${label}...`);
   const res = await fetch(csvUrl(gid));
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${label}`);
+  const fetchMs = Date.now() - t0;
   const text = await res.text();
+  const downloadMs = Date.now() - t0 - fetchMs;
   const rows = parseCSVLean(text);
-  console.log(`[cache] ${label}: ${rows.length} lean rows, ~${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB heap`);
+  const parseMs = Date.now() - t0 - fetchMs - downloadMs;
+  console.log(`[cache] ${label}: ${rows.length} rows | fetch:${fetchMs}ms download:${downloadMs}ms parse:${parseMs}ms | heap:${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB`);
   return rows;
 }
 
-// Fetch stores ONE AT A TIME to avoid 3× memory spike from parallel fetches
+// Fetch stores ONE AT A TIME to avoid 3x memory spike from parallel fetches
 async function refreshCache() {
   cache.status = 'loading';
+  const t0 = Date.now();
   try {
     cache.hyderabad = await fetchStore('hyderabad');
     cache.delhi     = await fetchStore('delhi');
     cache.pune      = await fetchStore('pune');
     cache.lastFetched = new Date();
     cache.status = 'ready';
-    console.log(`[cache] Done at ${cache.lastFetched.toISOString()}, heap: ~${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+    console.log(`[cache] All done in ${Date.now()-t0}ms total | heap:${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB`);
   } catch (err) {
     cache.status = 'error';
     console.error('[cache] Refresh failed:', err.message);
