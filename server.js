@@ -208,12 +208,10 @@ app.get('/api/search', (req, res) => {
       return res.status(503).json({ error: 'Not ready yet.' });
 
     const pk = store.toLowerCase();
-    const sks = Object.keys(STORES).filter(k => k !== pk);
 
     const primary   = searchRows(cache[pk] || [], q, type, STORES[pk]?.label || pk);
-    const secondary = sks.flatMap(k => searchRows(cache[k] || [], q, type, STORES[k]?.label || k));
 
-    res.json({ primary, secondary, total: primary.length + secondary.length, lastFetched: cache.lastFetched });
+    res.json({ primary, secondary: [], total: primary.length, lastFetched: cache.lastFetched });
   } catch (err) {
     console.error('[search]', err);
     res.status(500).json({ error: 'Internal error: ' + err.message });
