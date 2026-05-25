@@ -2,569 +2,238 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Stock Finder</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f0f2f5; min-height: 100vh; }
 
-  :root {
-    --c-bg: #f4f5f7;
-    --c-surface: #ffffff;
-    --c-border: #e2e4e9;
-    --c-text: #111827;
-    --c-muted: #6b7280;
-    --c-accent: #2563eb;
-    --c-accent-light: #eff6ff;
-    --c-green: #16a34a;
-    --c-green-light: #f0fdf4;
-    --c-red: #dc2626;
-    --c-red-light: #fef2f2;
-    --c-orange: #d97706;
-    --c-orange-light: #fffbeb;
-    --radius: 12px;
-    --radius-sm: 8px;
-  }
+  header { background: #1a1a2e; color: #fff; padding: 16px 20px;
+           display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; font-weight: 700; }
+  .store-dot { width: 10px; height: 10px; border-radius: 50%;
+               background: #4ade80; flex-shrink: 0; }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --c-bg: #0f1117;
-      --c-surface: #1c1f26;
-      --c-border: #2d3140;
-      --c-text: #f1f3f7;
-      --c-muted: #9ca3af;
-      --c-accent: #3b82f6;
-      --c-accent-light: #1e3a5f;
-      --c-green-light: #052e16;
-      --c-red-light: #2d0a0a;
-      --c-orange-light: #2d1a00;
-    }
-  }
+  .controls { background: #fff; padding: 16px 20px;
+              box-shadow: 0 1px 4px rgba(0,0,0,.08); }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--c-bg);
-    color: var(--c-text);
-    min-height: 100vh;
-    padding-bottom: 2rem;
-  }
+  select, input { width: 100%; padding: 11px 14px; border: 1.5px solid #ddd;
+                  border-radius: 10px; font-size: 15px; margin-bottom: 10px;
+                  appearance: none; background: #fafafa; }
+  select:focus, input:focus { outline: none; border-color: #6366f1; background:#fff; }
 
-  header {
-    background: var(--c-surface);
-    border-bottom: 1px solid var(--c-border);
-    padding: 1rem 1.25rem 0.75rem;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
+  .type-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tab { flex: 1; padding: 9px; border: 1.5px solid #ddd; border-radius: 8px;
+         background: #fafafa; font-size: 13px; font-weight: 600;
+         cursor: pointer; text-align: center; color: #555; transition: all .15s; }
+  .tab.active { background: #6366f1; color: #fff; border-color: #6366f1; }
 
-  .header-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-  }
+  button.search-btn { width: 100%; padding: 13px; background: #6366f1; color: #fff;
+                      border: none; border-radius: 10px; font-size: 16px;
+                      font-weight: 700; cursor: pointer; }
+  button.search-btn:active { background: #4f52d9; }
 
-  .logo {
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-    color: var(--c-text);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+  .status-bar { padding: 8px 20px; font-size: 12px; color: #888;
+                background: #fff; border-top: 1px solid #f0f0f0;
+                display: flex; justify-content: space-between; align-items: center; }
+  .refresh-btn { font-size: 12px; color: #6366f1; cursor: pointer;
+                 background: none; border: none; padding: 4px 8px;
+                 border-radius: 6px; font-weight: 600; }
+  .refresh-btn:hover { background: #eef2ff; }
 
-  .logo svg { width: 20px; height: 20px; }
+  .results { padding: 16px 16px 32px; }
 
-  .store-select {
-    appearance: none;
-    background: var(--c-accent-light);
-    color: var(--c-accent);
-    border: 1px solid var(--c-accent);
-    border-radius: 20px;
-    padding: 5px 28px 5px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 8px center;
-    cursor: pointer;
-    outline: none;
-  }
+  .section-label { font-size: 12px; font-weight: 700; color: #888;
+                   text-transform: uppercase; letter-spacing: .5px;
+                   margin: 12px 0 8px; }
+  .section-label.secondary { color: #aaa; }
 
-  .search-type-tabs {
-    display: flex;
-    gap: 6px;
-  }
+  .card { background: #fff; border-radius: 14px; padding: 14px 16px;
+          margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .card.secondary { opacity: .85; border-left: 3px solid #e0e0e0; }
 
-  .tab-btn {
-    flex: 1;
-    padding: 7px 4px;
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--c-muted);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-align: center;
-  }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start;
+              gap: 8px; margin-bottom: 8px; }
+  .item-name { font-size: 15px; font-weight: 700; color: #1a1a2e; flex: 1; }
+  .store-tag { font-size: 11px; font-weight: 700; padding: 3px 8px;
+               border-radius: 20px; background: #eef2ff; color: #6366f1;
+               white-space: nowrap; }
+  .store-tag.secondary { background: #f5f5f5; color: #888; }
 
-  .tab-btn.active {
-    background: var(--c-accent);
-    border-color: var(--c-accent);
-    color: #fff;
-  }
+  .card-meta { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.6; }
+  .card-meta span { margin-right: 10px; }
 
-  .search-bar {
-    padding: 0.75rem 1.25rem;
-    background: var(--c-surface);
-    border-bottom: 1px solid var(--c-border);
-    position: sticky;
-    top: 108px;
-    z-index: 9;
-  }
+  .stock-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; gap: 4px;
+           padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
+  .badge.green { background: #dcfce7; color: #16a34a; }
+  .badge.red   { background: #fee2e2; color: #dc2626; }
 
-  .search-input-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--c-bg);
-    border: 1.5px solid var(--c-border);
-    border-radius: 10px;
-    padding: 0 12px;
-    transition: border-color 0.15s;
-  }
-
-  .search-input-wrap:focus-within {
-    border-color: var(--c-accent);
-  }
-
-  .search-input-wrap svg { flex-shrink: 0; color: var(--c-muted); }
-
-  .search-input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    padding: 11px 0;
-    font-size: 15px;
-    color: var(--c-text);
-    outline: none;
-  }
-
-  .search-input::placeholder { color: var(--c-muted); }
-
-  .clear-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--c-muted);
-    padding: 4px;
-    display: none;
-    align-items: center;
-  }
-
-  .main { padding: 1rem 1.25rem; }
-
-  .section-label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--c-muted);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .section-label .count {
-    background: var(--c-accent);
-    color: #fff;
-    border-radius: 10px;
-    padding: 1px 7px;
-    font-size: 10px;
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
-  .result-card {
-    background: var(--c-surface);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius);
-    padding: 1rem 1.1rem;
-    margin-bottom: 10px;
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 8px;
-    gap: 8px;
-  }
-
-  .card-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--c-text);
-    line-height: 1.35;
-    flex: 1;
-  }
-
-  .card-brand {
-    font-size: 11px;
-    color: var(--c-muted);
-    margin-top: 2px;
-  }
-
-  .store-badge {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 6px;
-    flex-shrink: 0;
-    background: var(--c-accent-light);
-    color: var(--c-accent);
-  }
-
-  .stock-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-
-  .stock-badge {
-    flex: 1;
-    border-radius: var(--radius-sm);
-    padding: 8px 10px;
-    text-align: center;
-  }
-
-  .stock-badge.green { background: var(--c-green-light); }
-  .stock-badge.red   { background: var(--c-red-light); }
-
-  .stock-badge .qty {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1;
-    margin-bottom: 2px;
-  }
-
-  .stock-badge.green .qty { color: var(--c-green); }
-  .stock-badge.red   .qty { color: var(--c-red); }
-
-  .stock-badge .loc {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .stock-badge.green .loc { color: var(--c-green); }
-  .stock-badge.red   .loc { color: var(--c-red); }
-
-  .card-meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px 12px;
-    border-top: 1px solid var(--c-border);
-    padding-top: 8px;
-  }
-
-  .meta-item {
-    font-size: 12px;
-    color: var(--c-muted);
-    display: flex;
-    justify-content: space-between;
-    gap: 4px;
-  }
-
-  .meta-item span:last-child {
-    color: var(--c-text);
-    font-weight: 500;
-    text-align: right;
-  }
-
-  .secondary-section {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px dashed var(--c-border);
-  }
-
-  .state-box {
-    text-align: center;
-    padding: 3rem 1.5rem;
-    color: var(--c-muted);
-  }
-
-  .state-box svg {
-    width: 48px; height: 48px;
-    margin: 0 auto 1rem;
-    opacity: 0.4;
-  }
-
-  .state-box p { font-size: 15px; }
-  .state-box small { font-size: 13px; display: block; margin-top: 4px; }
-
-  .spinner {
-    width: 32px; height: 32px;
-    border: 3px solid var(--c-border);
-    border-top-color: var(--c-accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    margin: 3rem auto;
-  }
-
+  .empty { text-align: center; padding: 48px 20px; color: #aaa; font-size: 15px; }
+  .spinner { text-align: center; padding: 40px; color: #aaa; }
+  .spinner::after { content: ''; display: inline-block; width: 28px; height: 28px;
+                    border: 3px solid #eee; border-top-color: #6366f1;
+                    border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .error-box {
-    background: var(--c-red-light);
-    border: 1px solid #fca5a5;
-    border-radius: var(--radius-sm);
-    padding: 0.75rem 1rem;
-    font-size: 13px;
-    color: var(--c-red);
-  }
-
-  .size-chip {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid var(--c-border);
-    color: var(--c-muted);
-    margin-right: 4px;
-  }
-
-  .barcode-text {
-    font-size: 12px;
-    color: var(--c-muted);
-    font-family: monospace;
-    margin-top: 4px;
-  }
+  .error-msg { background: #fee2e2; color: #dc2626; padding: 12px 16px;
+               border-radius: 10px; margin: 16px; font-size: 14px; }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="header-top">
-    <div class="logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="2" y="4" width="4" height="16" rx="1"/>
-        <rect x="8" y="4" width="2" height="16" rx="1"/>
-        <rect x="12" y="4" width="4" height="16" rx="1"/>
-        <rect x="18" y="4" width="4" height="16" rx="1"/>
-      </svg>
-      Stock Finder
-    </div>
-    <select class="store-select" id="storeSelect">
-      <option value="hyderabad">Hyderabad</option>
-      <option value="delhi">Delhi</option>
-      <option value="pune">Pune</option>
-    </select>
-  </div>
-  <div class="search-type-tabs">
-    <button class="tab-btn active" data-type="barcode">🔍 Barcode</button>
-    <button class="tab-btn" data-type="brand">🏷️ Brand</button>
-    <button class="tab-btn" data-type="product">📦 Product</button>
-  </div>
+  <div class="store-dot" id="dotEl"></div>
+  <h1>Stock Finder</h1>
 </header>
 
-<div class="search-bar">
-  <div class="search-input-wrap">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-    </svg>
-    <input class="search-input" id="searchInput" type="search" autocomplete="off" autocorrect="off" spellcheck="false"
-      placeholder="Enter barcode…"/>
-    <button class="clear-btn" id="clearBtn" aria-label="Clear search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 6 6 18M6 6l12 12"/>
-      </svg>
-    </button>
+<div class="controls">
+  <select id="storeSelect">
+    <option value="hyderabad">Hyderabad</option>
+    <option value="delhi">Delhi</option>
+    <option value="pune">Pune</option>
+  </select>
+
+  <div class="type-tabs">
+    <div class="tab active" data-type="barcode">Barcode</div>
+    <div class="tab" data-type="brand">Brand</div>
+    <div class="tab" data-type="product">Product</div>
   </div>
+
+  <input type="text" id="queryInput" placeholder="Type to search…" autocomplete="off"/>
+  <button class="search-btn" onclick="doSearch()">Search</button>
 </div>
 
-<div class="main" id="main">
-  <div class="state-box">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="2" y="4" width="3" height="16" rx="1"/>
-      <rect x="7" y="4" width="2" height="16" rx="1"/>
-      <rect x="11" y="4" width="4" height="16" rx="1"/>
-      <rect x="17" y="4" width="3" height="16" rx="1"/>
-      <rect x="22" y="4" width="1" height="16" rx="1"/>
-    </svg>
-    <p>Search by barcode, brand, or product name</p>
-    <small>Select a store above to get started</small>
-  </div>
+<div class="status-bar">
+  <span id="statusText">Loading data…</span>
+  <button class="refresh-btn" onclick="forceRefresh()">↺ Refresh</button>
+</div>
+
+<div id="results" class="results">
+  <div class="empty">Select a store and search above</div>
 </div>
 
 <script>
-  const storeSelect = document.getElementById('storeSelect');
-  const searchInput = document.getElementById('searchInput');
-  const clearBtn    = document.getElementById('clearBtn');
-  const mainEl      = document.getElementById('main');
+  let selectedType = 'barcode';
 
-  let currentType = 'barcode';
-  let debounceTimer;
-
-  const placeholders = {
-    barcode: 'Enter barcode…',
-    brand:   'Enter brand name…',
-    product: 'Enter product / item name…',
-  };
-
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentType = btn.dataset.type;
-      searchInput.placeholder = placeholders[currentType];
-      searchInput.value = '';
-      clearBtn.style.display = 'none';
-      showIdle();
+  // Tab selection
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      selectedType = t.dataset.type;
+      const ph = { barcode: 'Enter barcode…', brand: 'Enter brand name…', product: 'Enter product name…' };
+      document.getElementById('queryInput').placeholder = ph[selectedType];
     });
   });
 
-  searchInput.addEventListener('input', () => {
-    const val = searchInput.value.trim();
-    clearBtn.style.display = val ? 'flex' : 'none';
-    clearTimeout(debounceTimer);
-    if (!val) { showIdle(); return; }
-    debounceTimer = setTimeout(() => doSearch(val), 400);
+  // Enter key
+  document.getElementById('queryInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
   });
 
-  clearBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    clearBtn.style.display = 'none';
-    showIdle();
-    searchInput.focus();
-  });
-
-  async function doSearch(query) {
-    showLoading();
-    const store = storeSelect.value;
+  // Status check
+  async function checkStatus() {
     try {
-      const res = await fetch(`/api/search?query=${encodeURIComponent(query)}&type=${currentType}&store=${store}`);
+      const r = await fetch('/api/status');
+      const d = await r.json();
+      const el = document.getElementById('statusText');
+      const dot = document.getElementById('dotEl');
+      if (d.status === 'ready') {
+        const t = new Date(d.lastFetched);
+        const fmt = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                  + ' ' + t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        el.textContent = `Data loaded · ${d.counts.hyderabad + d.counts.delhi + d.counts.pune} items · refreshed ${fmt}`;
+        dot.style.background = '#4ade80';
+      } else if (d.status === 'loading') {
+        el.textContent = 'Loading data from sheet…';
+        dot.style.background = '#facc15';
+        setTimeout(checkStatus, 2000);
+      } else {
+        el.textContent = 'Data load error — try refreshing';
+        dot.style.background = '#f87171';
+      }
+    } catch { setTimeout(checkStatus, 3000); }
+  }
+
+  async function forceRefresh() {
+    document.getElementById('statusText').textContent = 'Refreshing…';
+    await fetch('/api/refresh', { method: 'POST' });
+    checkStatus();
+  }
+
+  async function doSearch() {
+    const q     = document.getElementById('queryInput').value.trim();
+    const store = document.getElementById('storeSelect').value;
+    const type  = selectedType;
+    if (!q) return;
+
+    const out = document.getElementById('results');
+    out.innerHTML = '<div class="spinner"></div>';
+
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}&store=${store}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Search failed');
-      renderResults(data, query);
-    } catch (err) {
-      showError(err.message);
+
+      if (!res.ok) {
+        out.innerHTML = `<div class="error-msg">${data.error || 'Search failed'}</div>`;
+        return;
+      }
+
+      if (data.total === 0) {
+        out.innerHTML = '<div class="empty">No matching items found</div>';
+        return;
+      }
+
+      let html = '';
+      if (data.primary.length) {
+        html += `<div class="section-label">Selected Store (${data.primary[0].store})</div>`;
+        html += data.primary.map(renderCard).join('');
+      }
+      if (data.secondary.length) {
+        html += `<div class="section-label secondary">Other Stores</div>`;
+        html += data.secondary.map(r => renderCard(r, true)).join('');
+      }
+      out.innerHTML = html;
+    } catch (e) {
+      out.innerHTML = `<div class="error-msg">Network error: ${e.message}</div>`;
     }
   }
 
-  function showIdle() {
-    mainEl.innerHTML = `
-      <div class="state-box">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="2" y="4" width="3" height="16" rx="1"/>
-          <rect x="7" y="4" width="2" height="16" rx="1"/>
-          <rect x="11" y="4" width="4" height="16" rx="1"/>
-          <rect x="17" y="4" width="3" height="16" rx="1"/>
-        </svg>
-        <p>Search by barcode, brand, or product name</p>
-        <small>Showing stock for ${getStoreLabel()}</small>
-      </div>`;
+  function badge(label, qty) {
+    const n = parseInt(qty) || 0;
+    const cls = n > 0 ? 'green' : 'red';
+    return `<span class="badge ${cls}">${label}: ${n}</span>`;
   }
 
-  function showLoading() {
-    mainEl.innerHTML = '<div class="spinner"></div>';
-  }
-
-  function showError(msg) {
-    mainEl.innerHTML = `<div class="error-box">⚠️ ${msg}</div>`;
-  }
-
-  function getStoreLabel() {
-    return storeSelect.options[storeSelect.selectedIndex].text;
-  }
-
-  function stockClass(qty) { return qty > 0 ? 'green' : 'red'; }
-
-  function renderCard(item) {
-    const floorCls = stockClass(item.storeStock);
-    const whCls    = stockClass(item.warehouseStock);
+  function renderCard(r, secondary = false) {
+    const name = r.itemName || r.vendorArticleName || r.barcode || '—';
+    const storeTagCls = secondary ? 'store-tag secondary' : 'store-tag';
+    const cardCls = secondary ? 'card secondary' : 'card';
+    const meta = [
+      r.barcode   ? `<span>📦 ${r.barcode}</span>`            : '',
+      r.brand     ? `<span>🏷 ${r.brand}</span>`              : '',
+      r.size      ? `<span>📐 Size: ${r.size}</span>`         : '',
+      r.mrp       ? `<span>₹ MRP ${r.mrp}</span>`            : '',
+      r.expiryDate? `<span>⏳ Exp: ${r.expiryDate}</span>`    : '',
+    ].filter(Boolean).join('');
 
     return `
-    <div class="result-card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">${esc(item.itemName || item.vendorArticleName || '—')}</div>
-          <div class="card-brand">${esc(item.brand)}${item.size ? ' · Size: ' + esc(item.size) : ''}</div>
-          <div class="barcode-text">${esc(item.barcode)}</div>
+      <div class="${cardCls}">
+        <div class="card-top">
+          <div class="item-name">${name}</div>
+          <span class="${storeTagCls}">${r.store}</span>
         </div>
-        <div class="store-badge">${esc(item.store)}</div>
-      </div>
-      <div class="stock-row">
-        <div class="stock-badge ${floorCls}">
-          <div class="qty">${item.storeStock}</div>
-          <div class="loc">Floor</div>
+        <div class="card-meta">${meta}</div>
+        <div class="stock-row">
+          ${badge('Floor', r.storeStock)}
+          ${badge('WH', r.warehouseStock)}
         </div>
-        <div class="stock-badge ${whCls}">
-          <div class="qty">${item.warehouseStock}</div>
-          <div class="loc">Warehouse</div>
-        </div>
-      </div>
-      <div class="card-meta">
-        ${item.mrp       ? `<div class="meta-item"><span>MRP</span><span>₹${esc(item.mrp)}</span></div>` : ''}
-        ${item.rsp       ? `<div class="meta-item"><span>RSP</span><span>₹${esc(item.rsp)}</span></div>` : ''}
-        ${item.department? `<div class="meta-item"><span>Dept</span><span>${esc(item.department)}</span></div>` : ''}
-        ${item.section   ? `<div class="meta-item"><span>Section</span><span>${esc(item.section)}</span></div>` : ''}
-        ${item.salesQty60d ? `<div class="meta-item"><span>Sales 60D</span><span>${item.salesQty60d}</span></div>` : ''}
-        ${item.expiryDate? `<div class="meta-item"><span>Expiry</span><span>${esc(item.expiryDate)}</span></div>` : ''}
-      </div>
-    </div>`;
-  }
-
-  function renderResults(data, query) {
-    const { primary, secondary, store } = data;
-
-    if (primary.length === 0 && secondary.length === 0) {
-      mainEl.innerHTML = `
-        <div class="state-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            <path d="M8 11h6M11 8v6"/>
-          </svg>
-          <p>No results found for "<strong>${esc(query)}</strong>"</p>
-          <small>Try a different search term or store</small>
-        </div>`;
-      return;
-    }
-
-    let html = '';
-
-    if (primary.length > 0) {
-      html += `<div class="section-label">${esc(store)} <span class="count">${primary.length}</span></div>`;
-      html += primary.map(renderCard).join('');
-    } else {
-      html += `<div class="state-box" style="padding:1.5rem">
-        <p>No results in ${esc(store)}</p>
       </div>`;
-    }
-
-    if (secondary.length > 0) {
-      html += `<div class="secondary-section">
-        <div class="section-label">Other stores <span class="count">${secondary.length}</span></div>
-        ${secondary.map(renderCard).join('')}
-      </div>`;
-    }
-
-    mainEl.innerHTML = html;
   }
 
-  function esc(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  storeSelect.addEventListener('change', () => {
-    if (searchInput.value.trim()) doSearch(searchInput.value.trim());
-    else showIdle();
-  });
+  checkStatus();
 </script>
 </body>
 </html>
