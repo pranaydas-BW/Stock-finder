@@ -17,11 +17,10 @@
 
   .controls { background: #fff; padding: 16px 20px;
               box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-
   select, input { width: 100%; padding: 11px 14px; border: 1.5px solid #ddd;
                   border-radius: 10px; font-size: 15px; margin-bottom: 10px;
                   appearance: none; background: #fafafa; }
-  select:focus, input:focus { outline: none; border-color: #6366f1; background:#fff; }
+  select:focus, input:focus { outline: none; border-color: #6366f1; background: #fff; }
 
   .type-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
   .tab { flex: 1; padding: 9px; border: 1.5px solid #ddd; border-radius: 8px;
@@ -35,15 +34,6 @@
   button.search-btn:disabled { background: #a5a7f5; cursor: not-allowed; }
   button.search-btn:not(:disabled):active { background: #4f52d9; }
 
-  .status-bar { padding: 8px 20px; font-size: 12px; color: #888;
-                background: #fff; border-top: 1px solid #f0f0f0;
-                display: flex; justify-content: space-between; align-items: center; }
-  .refresh-btn { font-size: 12px; color: #6366f1; cursor: pointer;
-                 background: none; border: none; padding: 4px 8px;
-                 border-radius: 6px; font-weight: 600; }
-  .refresh-btn:hover { background: #eef2ff; }
-
-  /* Loading banner shown while cache is warming up */
   .loading-banner { background: #fefce8; border: 1px solid #fde047;
                     color: #854d0e; padding: 12px 20px; font-size: 13px;
                     display: flex; align-items: center; gap: 10px; }
@@ -52,31 +42,59 @@
                border-top-color: #854d0e; border-radius: 50%;
                animation: spin .7s linear infinite; flex-shrink: 0; }
 
-  .results { padding: 16px 16px 32px; }
+  .status-bar { padding: 8px 20px; font-size: 12px; color: #888;
+                background: #fff; border-top: 1px solid #f0f0f0;
+                display: flex; justify-content: space-between; align-items: center; }
+  .refresh-btn { font-size: 12px; color: #6366f1; cursor: pointer;
+                 background: none; border: none; padding: 4px 8px;
+                 border-radius: 6px; font-weight: 600; }
+  .refresh-btn:hover { background: #eef2ff; }
 
+  .results { padding: 16px 16px 32px; }
   .section-label { font-size: 12px; font-weight: 700; color: #888;
                    text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 8px; }
-  .section-label.secondary { color: #aaa; }
 
+  /* Card */
   .card { background: #fff; border-radius: 14px; padding: 14px 16px;
-          margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
-  .card.secondary { opacity: .85; border-left: 3px solid #e0e0e0; }
+          margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07);
+          cursor: pointer; transition: box-shadow .15s; }
+  .card:active { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .card.stockout { opacity: .6; }
 
   .card-top { display: flex; justify-content: space-between; align-items: flex-start;
-              gap: 8px; margin-bottom: 8px; }
-  .item-name { font-size: 15px; font-weight: 700; color: #1a1a2e; flex: 1; }
+              gap: 8px; margin-bottom: 6px; }
+  .item-name { font-size: 15px; font-weight: 700; color: #1a1a2e; flex: 1; line-height: 1.3; }
   .store-tag { font-size: 11px; font-weight: 700; padding: 3px 8px;
                border-radius: 20px; background: #eef2ff; color: #6366f1; white-space: nowrap; }
-  .store-tag.secondary { background: #f5f5f5; color: #888; }
 
   .card-meta { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.8; }
   .card-meta span { margin-right: 10px; }
 
-  .stock-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stock-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .badge { display: inline-flex; align-items: center; gap: 4px;
            padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
   .badge.green { background: #dcfce7; color: #16a34a; }
   .badge.red   { background: #fee2e2; color: #dc2626; }
+  .sizes-btn { margin-left: auto; font-size: 12px; color: #6366f1; font-weight: 600;
+               background: #eef2ff; border: none; padding: 5px 10px;
+               border-radius: 8px; cursor: pointer; white-space: nowrap; }
+
+  /* Sizes panel */
+  .sizes-panel { margin-top: 12px; border-top: 1px solid #f0f0f0; padding-top: 12px;
+                 display: none; }
+  .sizes-panel.open { display: block; }
+  .sizes-panel-title { font-size: 11px; font-weight: 700; color: #aaa;
+                       text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
+  .sizes-loading { text-align: center; padding: 12px; color: #aaa; font-size: 13px; }
+  .size-row { display: flex; align-items: center; justify-content: space-between;
+              padding: 7px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+  .size-row:last-child { border-bottom: none; }
+  .size-label { font-weight: 600; color: #1a1a2e; flex: 1; }
+  .size-bc { color: #aaa; font-size: 11px; flex: 1; }
+  .size-badges { display: flex; gap: 6px; }
+  .size-badge { padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+  .size-badge.green { background: #dcfce7; color: #16a34a; }
+  .size-badge.red   { background: #fee2e2; color: #dc2626; }
 
   .empty { text-align: center; padding: 48px 20px; color: #aaa; font-size: 15px; }
   .spinner { text-align: center; padding: 40px; }
@@ -84,9 +102,8 @@
                     border: 3px solid #eee; border-top-color: #6366f1;
                     border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .error-msg { background: #fee2e2; color: #dc2626; padding: 12px 16px;
-               border-radius: 10px; margin: 0; font-size: 14px; line-height: 1.5; }
+               border-radius: 10px; font-size: 14px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -102,21 +119,18 @@
     <option value="delhi">Delhi</option>
     <option value="pune">Pune</option>
   </select>
-
   <div class="type-tabs">
     <div class="tab active" data-type="barcode">Barcode</div>
     <div class="tab" data-type="brand">Brand</div>
     <div class="tab" data-type="product">Product</div>
   </div>
-
   <input type="text" id="queryInput" placeholder="Enter barcode…" autocomplete="off"/>
   <button class="search-btn" id="searchBtn" onclick="doSearch()" disabled>Loading data…</button>
 </div>
 
-<!-- Shown only while cache is warming up -->
 <div class="loading-banner" id="loadingBanner">
   <div class="mini-spin"></div>
-  <span id="loadingText">Loading inventory data from Google Sheets — this takes ~10 seconds on first load…</span>
+  <span id="loadingText">Loading inventory data from Google Sheets…</span>
 </div>
 
 <div class="status-bar">
@@ -147,6 +161,7 @@
     if (e.key === 'Enter' && cacheReady) doSearch();
   });
 
+  // ── Status / cache polling ──────────────────────────────────────────────────
   function setReady(counts, lastFetched) {
     cacheReady = true;
     const btn = document.getElementById('searchBtn');
@@ -154,12 +169,11 @@
     btn.textContent = 'Search';
     document.getElementById('loadingBanner').classList.add('hidden');
     document.getElementById('dotEl').style.background = '#4ade80';
-
     const total = (counts.hyderabad || 0) + (counts.delhi || 0) + (counts.pune || 0);
     const t = new Date(lastFetched);
     const fmt = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
               + ' ' + t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-    document.getElementById('statusText').textContent = `${total} items loaded · refreshed ${fmt}`;
+    document.getElementById('statusText').textContent = `${total} items · refreshed ${fmt}`;
   }
 
   function setLoading(msg) {
@@ -186,23 +200,18 @@
       const r = await fetch('/api/status');
       if (!r.ok) { setError('Server error — click ↺ Refresh'); return; }
       const d = await r.json();
-
       if (d.status === 'ready') {
         setReady(d.counts, d.lastFetched);
         if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
       } else if (d.status === 'loading') {
-        setLoading('Loading inventory data from Google Sheets — please wait…');
+        setLoading('Loading inventory from Google Sheets — please wait…');
         if (!statusPollTimer) statusPollTimer = setInterval(checkStatus, 2500);
-      } else if (d.status === 'error') {
-        setError('Failed to load data — click ↺ Refresh to retry');
-        if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
       } else {
-        setLoading('Initialising…');
-        if (!statusPollTimer) statusPollTimer = setInterval(checkStatus, 2500);
+        setError('Failed to load data — click ↺ Refresh');
+        if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
       }
     } catch (e) {
       setError('Cannot reach server');
-      // retry in 5s
       setTimeout(checkStatus, 5000);
     }
   }
@@ -211,13 +220,11 @@
     setLoading('Refreshing data from Google Sheets…');
     try {
       await fetch('/api/refresh', { method: 'POST' });
-      // Poll until ready
       if (!statusPollTimer) statusPollTimer = setInterval(checkStatus, 2500);
-    } catch (e) {
-      setError('Refresh request failed');
-    }
+    } catch { setError('Refresh request failed'); }
   }
 
+  // ── Search ──────────────────────────────────────────────────────────────────
   async function doSearch() {
     if (!cacheReady) return;
     const q     = document.getElementById('queryInput').value.trim();
@@ -231,63 +238,116 @@
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${selectedType}&store=${store}`);
       let data;
       try { data = await res.json(); }
-      catch { out.innerHTML = '<div class="results"><div class="error-msg">Server returned an unexpected response. Please try again.</div></div>'; return; }
+      catch { out.innerHTML = '<div class="error-msg">Unexpected server response. Please try again.</div>'; return; }
 
       if (!res.ok) {
-        out.innerHTML = `<div class="results"><div class="error-msg">${data.error || 'Search failed. Please try again.'}</div></div>`;
-        // If data not ready, start polling again
+        out.innerHTML = `<div class="error-msg">${data.error || 'Search failed.'}</div>`;
         if (res.status === 503) { cacheReady = false; checkStatus(); }
         return;
       }
+      if (data.total === 0) { out.innerHTML = '<div class="empty">No matching items found</div>'; return; }
 
-      if (data.total === 0) {
-        out.innerHTML = '<div class="empty">No matching items found</div>';
-        return;
-      }
+      const inStock  = data.primary.filter(r => hasStock(r));
+      const outStock = data.primary.filter(r => !hasStock(r));
 
       let html = '';
-      if (data.primary.length) {
-        html += `<div class="section-label">Selected Store (${data.primary[0].store}) — ${data.primary.length} result${data.primary.length !== 1 ? 's' : ''}</div>`;
-        html += data.primary.map(r => renderCard(r, false)).join('');
+      if (inStock.length) {
+        html += `<div class="section-label">In Stock (${inStock.length})</div>`;
+        html += inStock.map(r => renderCard(r, store)).join('');
       }
-      if (data.secondary.length) {
-        html += `<div class="section-label secondary">Other Stores — ${data.secondary.length} result${data.secondary.length !== 1 ? 's' : ''}</div>`;
-        html += data.secondary.map(r => renderCard(r, true)).join('');
+      if (outStock.length) {
+        html += `<div class="section-label" style="color:#f87171">Out of Stock (${outStock.length})</div>`;
+        html += outStock.map(r => renderCard(r, store)).join('');
       }
       out.innerHTML = html;
     } catch (e) {
-      out.innerHTML = `<div class="results"><div class="error-msg">Network error: ${e.message}</div></div>`;
+      out.innerHTML = `<div class="error-msg">Network error: ${e.message}</div>`;
     }
   }
 
-  function badge(label, qty) {
-    const n = parseInt(qty) || 0;
-    return `<span class="badge ${n > 0 ? 'green' : 'red'}">${label}: ${n}</span>`;
+  function hasStock(r) {
+    return (parseInt(r.storeStock) || 0) > 0 || (parseInt(r.warehouseStock) || 0) > 0;
   }
 
-  function renderCard(r, secondary) {
+  // ── Sizes panel ─────────────────────────────────────────────────────────────
+  async function toggleSizes(btn, itemName, van, store) {
+    const panel = btn.closest('.card').querySelector('.sizes-panel');
+    if (panel.classList.contains('open')) {
+      panel.classList.remove('open');
+      btn.textContent = '▼ All sizes';
+      return;
+    }
+    panel.classList.add('open');
+    btn.textContent = '▲ Hide sizes';
+
+    if (panel.dataset.loaded) return; // already fetched
+    panel.innerHTML = '<div class="sizes-panel-title">All Sizes</div><div class="sizes-loading">Loading…</div>';
+    panel.classList.add('open');
+
+    try {
+      const res = await fetch(`/api/sizes?itemName=${encodeURIComponent(itemName)}&van=${encodeURIComponent(van)}&store=${encodeURIComponent(store)}`);
+      const data = await res.json();
+      if (!res.ok || !data.sizes) { panel.innerHTML = '<div class="sizes-loading">Could not load sizes.</div>'; return; }
+
+      let html = '<div class="sizes-panel-title">All Sizes</div>';
+      if (data.sizes.length === 0) {
+        html += '<div class="sizes-loading">No other sizes found.</div>';
+      } else {
+        data.sizes.forEach(s => {
+          const f = parseInt(s.storeStock)  || 0;
+          const w = parseInt(s.warehouseStock) || 0;
+          html += `
+            <div class="size-row">
+              <span class="size-label">${s.size || '—'}</span>
+              <span class="size-bc">${s.barcode || ''}</span>
+              <div class="size-badges">
+                <span class="size-badge ${f > 0 ? 'green' : 'red'}">Floor: ${f}</span>
+                <span class="size-badge ${w > 0 ? 'green' : 'red'}">WH: ${w}</span>
+              </div>
+            </div>`;
+        });
+      }
+      panel.innerHTML = html;
+      panel.dataset.loaded = '1';
+    } catch (e) {
+      panel.innerHTML = '<div class="sizes-loading">Error loading sizes.</div>';
+    }
+  }
+
+  // ── Render card ─────────────────────────────────────────────────────────────
+  let cardIdx = 0;
+  function renderCard(r, store) {
     const name = r.itemName || r.vendorArticleName || r.barcode || '—';
+    const f = parseInt(r.storeStock)     || 0;
+    const w = parseInt(r.warehouseStock) || 0;
+    const stockout = f === 0 && w === 0;
+    const id = 'card-' + (cardIdx++);
+
+    const iname = (r.itemName || '').replace(/'/g, "\\'");
+    const van   = (r.vendorArticleName || '').replace(/'/g, "\\'");
+
     return `
-      <div class="card${secondary ? ' secondary' : ''}">
+      <div class="card${stockout ? ' stockout' : ''}">
         <div class="card-top">
           <div class="item-name">${name}</div>
-          <span class="store-tag${secondary ? ' secondary' : ''}">${r.store}</span>
+          <span class="store-tag">${r.store}</span>
         </div>
         <div class="card-meta">
-          ${r.barcode    ? `<span>📦 ${r.barcode}</span>`         : ''}
-          ${r.brand      ? `<span>🏷 ${r.brand}</span>`           : ''}
-          ${r.size       ? `<span>📐 ${r.size}</span>`            : ''}
-          ${r.mrp        ? `<span>₹ MRP ${r.mrp}</span>`          : ''}
-          ${r.expiryDate ? `<span>⏳ Exp: ${r.expiryDate}</span>` : ''}
+          ${r.barcode    ? `<span>📦 ${r.barcode}</span>`        : ''}
+          ${r.brand      ? `<span>🏷 ${r.brand}</span>`          : ''}
+          ${r.size       ? `<span>📐 ${r.size}</span>`           : ''}
+          ${r.mrp        ? `<span>₹ MRP ${r.mrp}</span>`         : ''}
+          ${r.expiryDate ? `<span>⏳ ${r.expiryDate}</span>`     : ''}
         </div>
         <div class="stock-row">
-          ${badge('Floor', r.storeStock)}
-          ${badge('WH', r.warehouseStock)}
+          <span class="badge ${f > 0 ? 'green' : 'red'}">Floor: ${f}</span>
+          <span class="badge ${w > 0 ? 'green' : 'red'}">WH: ${w}</span>
+          <button class="sizes-btn" onclick="event.stopPropagation(); toggleSizes(this, '${iname}', '${van}', '${store}')">▼ All sizes</button>
         </div>
+        <div class="sizes-panel" id="${id}-sizes"></div>
       </div>`;
   }
 
-  // Kick off
   checkStatus();
 </script>
 </body>

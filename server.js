@@ -126,8 +126,14 @@ function scheduleDailyRefresh() {
 // ── Search helpers ────────────────────────────────────────────────────────────
 function norm(s) { return (s || '').toLowerCase().trim(); }
 
+function tokenize(s) {
+  // Split on spaces/hyphens/underscores, drop empty tokens
+  return norm(s).split(/[\s\-_/]+/).filter(t => t.length > 0);
+}
+
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 3) return 99; // early exit — too different
   const dp = Array.from({ length: m + 1 }, (_, i) =>
     Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0)
   );
@@ -139,11 +145,53 @@ function levenshtein(a, b) {
   return dp[m][n];
 }
 
-function fuzzyMatch(query, target) {
-  const q = norm(query), t = norm(target);
-  if (t.includes(q)) return true;
-  if (q.length <= 3) return false;
-  return levenshtein(q, t.slice(0, q.length + 2)) <= Math.floor(q.length / 5);
+// Returns true if query token fuzzy-matches a target token
+function tokenFuzzy(qt, tt) {
+  if (tt.includes(qt)) return true;           // substring match
+  if (qt.length <= 2) return qt === tt;        // short tokens must be exact
+  const maxDist = qt.length <= 4 ? 1 : 2;     // 1 typo for short, 2 for long
+  return levenshtein(qt, tt) <= maxDist;
+}
+
+// Core fuzzy scorer — returns a score (higher = better match), 0 = no match
+// Strategy:
+//   1. Full string substring match  → score 100
+//   2. All query tokens found in target tokens (fuzzy) → score 80+
+//   3. Most query tokens match → score 50+ (partial match)
+function fuzzyScore(query, target) {
+  const q = norm(query);
+  const t = norm(target);
+  if (!q || !t) return 0;
+
+  // 1. Direct substring
+  if (t.includes(q)) return 100;
+
+  const qTokens = tokenize(query);
+  const tTokens = tokenize(target);
+  if (qTokens.length === 0) return 0;
+
+  // 2. Token matching — for each query token, find best match in target tokens
+  let matchedCount = 0;
+  for (const qt of qTokens) {
+    for (const tt of tTokens) {
+      if (tokenFuzzy(qt, tt)) { matchedCount++; break; }
+    }
+  }
+
+  const ratio = matchedCount / qTokens.length;
+  if (ratio === 1) return 80;     // all tokens matched
+  if (ratio >= 0.7) return 50;    // most tokens matched (e.g. 2 of 3)
+  return 0;
+}
+
+// Brand search: fuzzy on brand field only
+function brandMatch(query, brand) {
+  return fuzzyScore(query, brand) > 0;
+}
+
+// Product search: fuzzy on item name + vendor article name, return best score
+function productMatch(query, iname, van) {
+  return Math.max(fuzzyScore(query, iname), fuzzyScore(query, van)) > 0;
 }
 
 function toCard(row, storeName) {
@@ -161,16 +209,53 @@ function toCard(row, storeName) {
   };
 }
 
+function hasStock(card) {
+  return (parseInt(card.storeStock) || 0) > 0 || (parseInt(card.warehouseStock) || 0) > 0;
+}
+
 function searchRows(rows, q, type, storeName) {
   const qn = norm(q);
+  const scored = [];
+
+  for (const row of rows) {
+    let score = 0;
+    if (type === 'barcode') {
+      if (norm(row.bc).includes(qn)) score = 100;
+    } else if (type === 'brand') {
+      score = fuzzyScore(q, row.brand);
+    } else if (type === 'product') {
+      score = Math.max(fuzzyScore(q, row.iname), fuzzyScore(q, row.van));
+    }
+    if (score > 0) scored.push({ score, card: toCard(row, storeName) });
+  }
+
+  // Sort: in-stock first, then by match score descending within each group
+  scored.sort((a, b) => {
+    const aStock = hasStock(a.card) ? 1 : 0;
+    const bStock = hasStock(b.card) ? 1 : 0;
+    if (bStock !== aStock) return bStock - aStock; // in-stock first
+    return b.score - a.score;                       // then by relevance
+  });
+  return scored.map(s => s.card);
+}
+
+// Find all sizes of the same product — matched by itemName or vendorArticleName
+function getSizes(rows, itemName, van, storeName) {
+  const inorm = norm(itemName);
+  const vnorm = norm(van);
   const results = [];
   for (const row of rows) {
-    let match = false;
-    if (type === 'barcode') match = norm(row.bc).includes(qn);
-    else if (type === 'brand')   match = norm(row.brand).includes(qn);
-    else if (type === 'product') match = fuzzyMatch(q, row.iname) || fuzzyMatch(q, row.van);
-    if (match) results.push(toCard(row, storeName));
+    const nameMatch = inorm && norm(row.iname) === inorm;
+    const vanMatch  = vnorm && norm(row.van)   === vnorm;
+    if (nameMatch || vanMatch) results.push(toCard(row, storeName));
   }
+  // Sort: in-stock first, then by size
+  results.sort((a, b) => {
+    const aStock = hasStock(a) ? 1 : 0;
+    const bStock = hasStock(b) ? 1 : 0;
+    if (bStock !== aStock) return bStock - aStock;
+    return (a.size || '').localeCompare(b.size || '');
+  });
   return results;
 }
 
@@ -214,6 +299,21 @@ app.get('/api/search', (req, res) => {
     res.json({ primary, secondary: [], total: primary.length, lastFetched: cache.lastFetched });
   } catch (err) {
     console.error('[search]', err);
+    res.status(500).json({ error: 'Internal error: ' + err.message });
+  }
+});
+
+// Sizes endpoint — returns all variants (sizes) of a product
+app.get('/api/sizes', (req, res) => {
+  try {
+    const { itemName, van, store } = req.query;
+    if (!store) return res.status(400).json({ error: 'Missing store.' });
+    if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
+    const pk = store.toLowerCase();
+    const sizes = getSizes(cache[pk] || [], itemName || '', van || '', STORES[pk]?.label || pk);
+    res.json({ sizes, total: sizes.length });
+  } catch (err) {
+    console.error('[sizes]', err);
     res.status(500).json({ error: 'Internal error: ' + err.message });
   }
 });
