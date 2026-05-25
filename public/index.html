@@ -17,16 +17,30 @@
 
   .controls { background: #fff; padding: 16px 20px;
               box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+  label { font-size: 12px; font-weight: 600; color: #888;
+          display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .4px; }
+
   select, input { width: 100%; padding: 11px 14px; border: 1.5px solid #ddd;
-                  border-radius: 10px; font-size: 15px; margin-bottom: 10px;
+                  border-radius: 10px; font-size: 15px; margin-bottom: 12px;
                   appearance: none; background: #fafafa; }
   select:focus, input:focus { outline: none; border-color: #6366f1; background: #fff; }
 
-  .type-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
-  .tab { flex: 1; padding: 9px; border: 1.5px solid #ddd; border-radius: 8px;
-         background: #fafafa; font-size: 13px; font-weight: 600;
-         cursor: pointer; text-align: center; color: #555; transition: all .15s; }
-  .tab.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+  /* Brand autocomplete wrapper */
+  .brand-wrap { position: relative; margin-bottom: 12px; }
+  .brand-wrap input { margin-bottom: 0; }
+  .brand-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+                    background: #fff; border: 1.5px solid #ddd; border-top: none;
+                    border-radius: 0 0 10px 10px; max-height: 220px; overflow-y: auto;
+                    box-shadow: 0 4px 12px rgba(0,0,0,.1); display: none; }
+  .brand-dropdown.open { display: block; }
+  .brand-option { padding: 10px 14px; font-size: 14px; cursor: pointer; color: #333; }
+  .brand-option:hover, .brand-option.highlighted { background: #eef2ff; color: #6366f1; }
+  .brand-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+                 background: #e0e0e0; border: none; border-radius: 50%;
+                 width: 20px; height: 20px; font-size: 12px; cursor: pointer;
+                 display: none; align-items: center; justify-content: center; color: #555; }
+  .brand-clear.visible { display: flex; }
 
   button.search-btn { width: 100%; padding: 13px; background: #6366f1; color: #fff;
                       border: none; border-radius: 10px; font-size: 16px;
@@ -67,11 +81,39 @@
   .card-meta { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.8; }
   .card-meta span { margin-right: 10px; }
 
-  .stock-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .badge { display: inline-flex; align-items: center; gap: 4px;
+  .stock-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .badge { display: inline-flex; align-items: center;
            padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
   .badge.green { background: #dcfce7; color: #16a34a; }
   .badge.red   { background: #fee2e2; color: #dc2626; }
+
+  .style-btn { margin-left: auto; font-size: 12px; color: #6366f1; font-weight: 600;
+               background: #eef2ff; border: none; padding: 5px 10px;
+               border-radius: 8px; cursor: pointer; white-space: nowrap; }
+  .style-btn:active { background: #e0e7ff; }
+
+  /* Style modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45);
+                   z-index: 200; display: none; align-items: flex-end; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 20px 20px 0 0; width: 100%;
+           max-height: 80vh; display: flex; flex-direction: column;
+           padding: 0 0 env(safe-area-inset-bottom); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center;
+                  padding: 16px 20px; border-bottom: 1px solid #f0f0f0; }
+  .modal-title { font-size: 15px; font-weight: 700; color: #1a1a2e; }
+  .modal-close { background: #f0f0f0; border: none; border-radius: 50%;
+                 width: 28px; height: 28px; font-size: 16px; cursor: pointer; color: #555; }
+  .modal-body { overflow-y: auto; padding: 12px 16px 24px; }
+  .modal-card { background: #f8f8f8; border-radius: 10px; padding: 12px 14px;
+                margin-bottom: 8px; }
+  .modal-card-name { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+  .modal-card-meta { font-size: 12px; color: #888; margin-bottom: 8px; }
+  .modal-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .modal-badge { padding: 4px 10px; border-radius: 7px; font-size: 12px; font-weight: 700; }
+  .modal-badge.green { background: #dcfce7; color: #16a34a; }
+  .modal-badge.red   { background: #fee2e2; color: #dc2626; }
+  .modal-loading { text-align: center; padding: 32px; color: #aaa; }
 
   .empty { text-align: center; padding: 48px 20px; color: #aaa; font-size: 15px; }
   .spinner { text-align: center; padding: 40px; }
@@ -91,17 +133,25 @@
 </header>
 
 <div class="controls">
-  <select id="storeSelect">
+  <label>Store</label>
+  <select id="storeSelect" onchange="onStoreChange()">
     <option value="hyderabad">Hyderabad</option>
     <option value="delhi">Delhi</option>
     <option value="pune">Pune</option>
   </select>
-  <div class="type-tabs">
-    <div class="tab active" data-type="barcode">Barcode</div>
-    <div class="tab" data-type="brand">Brand</div>
-    <div class="tab" data-type="product">Product</div>
+
+  <label>Brand <span style="font-weight:400;text-transform:none">(optional)</span></label>
+  <div class="brand-wrap">
+    <input type="text" id="brandInput" placeholder="Type to filter by brand…"
+           autocomplete="off" oninput="onBrandInput()" onkeydown="onBrandKey(event)" onfocus="openBrandDropdown()"/>
+    <button class="brand-clear" id="brandClear" onclick="clearBrand()">✕</button>
+    <div class="brand-dropdown" id="brandDropdown"></div>
   </div>
-  <input type="text" id="queryInput" placeholder="Enter barcode…" autocomplete="off"/>
+
+  <label>Search</label>
+  <input type="text" id="queryInput" placeholder="Barcode or product name…"
+         autocomplete="off" onkeydown="if(event.key==='Enter' && cacheReady) doSearch()"/>
+
   <button class="search-btn" id="searchBtn" onclick="doSearch()" disabled>Loading data…</button>
 </div>
 
@@ -119,37 +169,126 @@
   <div class="empty">Select a store and search above</div>
 </div>
 
+<!-- Style group modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Style Group</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <div class="modal-loading">Loading…</div>
+    </div>
+  </div>
+</div>
+
 <script>
-  let selectedType = 'barcode';
-  let cacheReady = false;
+  let cacheReady   = false;
+  let allBrands    = [];
+  let selectedBrand = '';
+  let highlightIdx  = -1;
   let statusPollTimer = null;
 
-  document.querySelectorAll('.tab').forEach(t => {
-    t.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
-      selectedType = t.dataset.type;
-      const ph = { barcode: 'Enter barcode…', brand: 'Enter brand name…', product: 'Enter product name…' };
-      document.getElementById('queryInput').placeholder = ph[selectedType];
-    });
+  // ── Store change ────────────────────────────────────────────────────────────
+  function onStoreChange() {
+    clearBrand();
+    if (cacheReady) loadBrands();
+  }
+
+  async function loadBrands() {
+    const store = document.getElementById('storeSelect').value;
+    try {
+      const r = await fetch(`/api/brands?store=${store}`);
+      const d = await r.json();
+      allBrands = d.brands || [];
+    } catch { allBrands = []; }
+  }
+
+  // ── Brand autocomplete ──────────────────────────────────────────────────────
+  function onBrandInput() {
+    selectedBrand = '';
+    document.getElementById('brandClear').classList.remove('visible');
+    renderBrandDropdown();
+  }
+
+  function openBrandDropdown() {
+    if (allBrands.length) renderBrandDropdown();
+  }
+
+  function renderBrandDropdown() {
+    const q   = document.getElementById('brandInput').value.toLowerCase();
+    const dd  = document.getElementById('brandDropdown');
+    const matches = q
+      ? allBrands.filter(b => b.toLowerCase().includes(q)).slice(0, 60)
+      : allBrands.slice(0, 60);
+
+    if (!matches.length) { dd.classList.remove('open'); return; }
+
+    highlightIdx = -1;
+    dd.innerHTML = matches.map((b, i) =>
+      `<div class="brand-option" data-brand="${b}" onmousedown="selectBrand('${b.replace(/'/g,"\\'")}')">
+        ${b}
+       </div>`
+    ).join('');
+    dd.classList.add('open');
+  }
+
+  function selectBrand(brand) {
+    selectedBrand = brand;
+    document.getElementById('brandInput').value = brand;
+    document.getElementById('brandDropdown').classList.remove('open');
+    document.getElementById('brandClear').classList.add('visible');
+  }
+
+  function clearBrand() {
+    selectedBrand = '';
+    document.getElementById('brandInput').value = '';
+    document.getElementById('brandDropdown').classList.remove('open');
+    document.getElementById('brandClear').classList.remove('visible');
+  }
+
+  function onBrandKey(e) {
+    const dd      = document.getElementById('brandDropdown');
+    const options = dd.querySelectorAll('.brand-option');
+    if (!dd.classList.contains('open') || !options.length) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlightIdx = Math.min(highlightIdx + 1, options.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlightIdx = Math.max(highlightIdx - 1, 0);
+    } else if (e.key === 'Enter' && highlightIdx >= 0) {
+      e.preventDefault();
+      selectBrand(options[highlightIdx].dataset.brand);
+      return;
+    } else if (e.key === 'Escape') {
+      dd.classList.remove('open'); return;
+    } else { return; }
+
+    options.forEach((o, i) => o.classList.toggle('highlighted', i === highlightIdx));
+    options[highlightIdx]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.brand-wrap'))
+      document.getElementById('brandDropdown').classList.remove('open');
   });
 
-  document.getElementById('queryInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && cacheReady) doSearch();
-  });
-
+  // ── Status / cache ──────────────────────────────────────────────────────────
   function setReady(counts, lastFetched) {
     cacheReady = true;
     const btn = document.getElementById('searchBtn');
-    btn.disabled = false;
-    btn.textContent = 'Search';
+    btn.disabled = false; btn.textContent = 'Search';
     document.getElementById('loadingBanner').classList.add('hidden');
     document.getElementById('dotEl').style.background = '#4ade80';
-    const total = (counts.hyderabad || 0) + (counts.delhi || 0) + (counts.pune || 0);
+    const total = (counts.hyderabad||0) + (counts.delhi||0) + (counts.pune||0);
     const t = new Date(lastFetched);
-    const fmt = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-              + ' ' + t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-    document.getElementById('statusText').textContent = `${total.toLocaleString()} items · refreshed ${fmt}`;
+    const fmt = t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})
+              + ' ' + t.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+    document.getElementById('statusText').textContent = `${total.toLocaleString()} items · ${fmt}`;
+    loadBrands();
   }
 
   function setLoading(msg) {
@@ -157,7 +296,7 @@
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('searchBtn').textContent = 'Loading data…';
     document.getElementById('loadingBanner').classList.remove('hidden');
-    document.getElementById('loadingText').textContent = msg || 'Loading inventory data…';
+    document.getElementById('loadingText').textContent = msg || 'Loading…';
     document.getElementById('dotEl').style.background = '#facc15';
     document.getElementById('statusText').textContent = 'Loading…';
   }
@@ -174,7 +313,7 @@
   async function checkStatus() {
     try {
       const r = await fetch('/api/status');
-      if (!r.ok) { setError('Server error — click ↺ Refresh'); return; }
+      if (!r.ok) { setError('Server error'); return; }
       const d = await r.json();
       if (d.status === 'ready') {
         setReady(d.counts, d.lastFetched);
@@ -183,25 +322,22 @@
         setLoading('Loading inventory from Google Sheets — please wait…');
         if (!statusPollTimer) statusPollTimer = setInterval(checkStatus, 2500);
       } else {
-        setError('Failed to load data — click ↺ Refresh');
+        setError('Failed to load — click ↺ Refresh');
         if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
       }
-    } catch (e) {
-      setError('Cannot reach server');
-      setTimeout(checkStatus, 5000);
-    }
+    } catch { setError('Cannot reach server'); setTimeout(checkStatus, 5000); }
   }
 
   async function forceRefresh() {
-    setLoading('Refreshing data from Google Sheets…');
-    try {
-      await fetch('/api/refresh', { method: 'POST' });
+    setLoading('Refreshing…');
+    try { await fetch('/api/refresh', { method: 'POST' });
       if (!statusPollTimer) statusPollTimer = setInterval(checkStatus, 2500);
-    } catch { setError('Refresh request failed'); }
+    } catch { setError('Refresh failed'); }
   }
 
+  // ── Search ──────────────────────────────────────────────────────────────────
   function hasStock(r) {
-    return (parseInt(r.storeStock) || 0) > 0 || (parseInt(r.warehouseStock) || 0) > 0;
+    return (parseInt(r.storeStock)||0) > 0 || (parseInt(r.warehouseStock)||0) > 0;
   }
 
   async function doSearch() {
@@ -213,11 +349,14 @@
     const out = document.getElementById('results');
     out.innerHTML = '<div class="spinner"></div>';
 
+    const params = new URLSearchParams({ q, store });
+    if (selectedBrand) params.set('brand', selectedBrand);
+
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${selectedType}&store=${store}`);
+      const res = await fetch(`/api/search?${params}`);
       let data;
       try { data = await res.json(); }
-      catch { out.innerHTML = '<div class="error-msg">Unexpected server response. Please try again.</div>'; return; }
+      catch { out.innerHTML = '<div class="error-msg">Unexpected server response.</div>'; return; }
 
       if (!res.ok) {
         out.innerHTML = `<div class="error-msg">${data.error || 'Search failed.'}</div>`;
@@ -231,7 +370,6 @@
 
       const inStock  = data.primary.filter(r =>  hasStock(r));
       const outStock = data.primary.filter(r => !hasStock(r));
-
       let html = '';
       if (inStock.length) {
         html += `<div class="section-label">In Stock (${inStock.length})</div>`;
@@ -248,10 +386,14 @@
   }
 
   function renderCard(r) {
-    const name = r.itemName || r.vendorArticleName || r.barcode || '—';
-    const f = parseInt(r.storeStock)     || 0;
-    const w = parseInt(r.warehouseStock) || 0;
+    const name   = r.itemName || r.vendorArticleName || r.barcode || '—';
+    const f      = parseInt(r.storeStock)     || 0;
+    const w      = parseInt(r.warehouseStock) || 0;
     const stockout = f === 0 && w === 0;
+    const store  = document.getElementById('storeSelect').value;
+    const styleBtn = r.styleId
+      ? `<button class="style-btn" onclick="openStyleModal('${r.styleId.replace(/'/g,"\\'")}','${store}')">🔗 Style group</button>`
+      : '';
     return `
       <div class="card${stockout ? ' stockout' : ''}">
         <div class="card-top">
@@ -259,17 +401,64 @@
           <span class="store-tag">${r.store}</span>
         </div>
         <div class="card-meta">
-          ${r.barcode    ? `<span>📦 ${r.barcode}</span>`       : ''}
-          ${r.brand      ? `<span>🏷 ${r.brand}</span>`         : ''}
-          ${r.size       ? `<span>📐 ${r.size}</span>`          : ''}
-          ${r.mrp        ? `<span>₹ MRP ${r.mrp}</span>`        : ''}
-          ${r.expiryDate ? `<span>⏳ ${r.expiryDate}</span>`    : ''}
+          ${r.barcode    ? `<span>📦 ${r.barcode}</span>`    : ''}
+          ${r.brand      ? `<span>🏷 ${r.brand}</span>`      : ''}
+          ${r.size       ? `<span>📐 ${r.size}</span>`       : ''}
+          ${r.mrp        ? `<span>₹ ${r.mrp}</span>`         : ''}
+          ${r.styleId    ? `<span>🆔 ${r.styleId}</span>`    : ''}
+          ${r.expiryDate ? `<span>⏳ ${r.expiryDate}</span>` : ''}
         </div>
         <div class="stock-row">
-          <span class="badge ${f > 0 ? 'green' : 'red'}">Floor: ${f}</span>
-          <span class="badge ${w > 0 ? 'green' : 'red'}">WH: ${w}</span>
+          <span class="badge ${f>0?'green':'red'}">Floor: ${f}</span>
+          <span class="badge ${w>0?'green':'red'}">WH: ${w}</span>
+          ${styleBtn}
         </div>
       </div>`;
+  }
+
+  // ── Style modal ─────────────────────────────────────────────────────────────
+  async function openStyleModal(styleId, store) {
+    document.getElementById('modalTitle').textContent = `Style: ${styleId}`;
+    document.getElementById('modalBody').innerHTML = '<div class="modal-loading">Loading…</div>';
+    document.getElementById('modalOverlay').classList.add('open');
+
+    try {
+      const res  = await fetch(`/api/style?styleId=${encodeURIComponent(styleId)}&store=${store}`);
+      const data = await res.json();
+      if (!res.ok || !data.items) {
+        document.getElementById('modalBody').innerHTML = `<div class="error-msg">${data.error || 'Failed to load.'}</div>`;
+        return;
+      }
+      if (data.items.length === 0) {
+        document.getElementById('modalBody').innerHTML = '<div class="modal-loading">No items found for this style.</div>';
+        return;
+      }
+      document.getElementById('modalBody').innerHTML = data.items.map(r => {
+        const name = r.itemName || r.vendorArticleName || r.barcode || '—';
+        const f = parseInt(r.storeStock)     || 0;
+        const w = parseInt(r.warehouseStock) || 0;
+        return `
+          <div class="modal-card">
+            <div class="modal-card-name">${name}</div>
+            <div class="modal-card-meta">
+              ${r.barcode ? `📦 ${r.barcode}` : ''}
+              ${r.size    ? ` · 📐 ${r.size}` : ''}
+              ${r.mrp     ? ` · ₹ ${r.mrp}`   : ''}
+            </div>
+            <div class="modal-badges">
+              <span class="modal-badge ${f>0?'green':'red'}">Floor: ${f}</span>
+              <span class="modal-badge ${w>0?'green':'red'}">WH: ${w}</span>
+            </div>
+          </div>`;
+      }).join('');
+    } catch (e) {
+      document.getElementById('modalBody').innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+    }
+  }
+
+  function closeModal(e) {
+    if (!e || e.target === document.getElementById('modalOverlay') || !e.target)
+      document.getElementById('modalOverlay').classList.remove('open');
   }
 
   checkStatus();

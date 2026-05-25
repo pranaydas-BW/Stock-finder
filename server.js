@@ -18,10 +18,13 @@ function csvUrl(gid) {
 
 const KEEP_COLS = new Set([
   'BARCODE', 'Brand', 'Vendor Article Name', 'Item Name',
-  'Size', 'MRP', 'Expiry Date', 'Ware house stock', 'Store stock',
+  'Size', 'MRP', 'Expiry Date', 'Ware house stock', 'Store stock', 'Style Group ID',
 ]);
 
 const cache = { hyderabad: [], delhi: [], pune: [], lastFetched: null, status: 'empty' };
+
+// Per-store brand index: { storeName: Set<brand> }
+const brandIndex = { hyderabad: [], delhi: [], pune: [] };
 
 function parseCSVLean(text) {
   const lines = text.split('\n');
@@ -45,15 +48,16 @@ function parseCSVLean(text) {
   const idx = {};
   rawHeaders.forEach((h, i) => { if (KEEP_COLS.has(h)) idx[h] = i; });
 
-  const iBC    = idx['BARCODE']             ?? -1;
-  const iBrand = idx['Brand']               ?? -1;
-  const iVAN   = idx['Vendor Article Name'] ?? -1;
-  const iName  = idx['Item Name']           ?? -1;
-  const iSize  = idx['Size']                ?? -1;
-  const iMRP   = idx['MRP']                 ?? -1;
-  const iExp   = idx['Expiry Date']         ?? -1;
-  const iWH    = idx['Ware house stock']    ?? -1;
-  const iFloor = idx['Store stock']         ?? -1;
+  const iBC     = idx['BARCODE']             ?? -1;
+  const iBrand  = idx['Brand']               ?? -1;
+  const iVAN    = idx['Vendor Article Name'] ?? -1;
+  const iName   = idx['Item Name']           ?? -1;
+  const iSize   = idx['Size']                ?? -1;
+  const iMRP    = idx['MRP']                 ?? -1;
+  const iExp    = idx['Expiry Date']         ?? -1;
+  const iWH     = idx['Ware house stock']    ?? -1;
+  const iFloor  = idx['Store stock']         ?? -1;
+  const iStyle  = idx['Style Group ID']      ?? -1;
 
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
@@ -66,14 +70,15 @@ function parseCSVLean(text) {
     if (!bc && !iname && !van) continue;
     rows.push({
       bc,
-      brand: iBrand >= 0 ? (v[iBrand] || '').trim() : '',
+      brand:  iBrand >= 0 ? (v[iBrand] || '').trim() : '',
       van,
       iname,
-      size:  iSize  >= 0 ? (v[iSize]  || '').trim() : '',
-      mrp:   iMRP   >= 0 ? (v[iMRP]   || '').trim() : '',
-      exp:   iExp   >= 0 ? (v[iExp]   || '').trim() : '',
-      wh:    iWH    >= 0 ? (v[iWH]    || '0').trim() : '0',
-      floor: iFloor >= 0 ? (v[iFloor] || '0').trim() : '0',
+      size:   iSize  >= 0 ? (v[iSize]  || '').trim() : '',
+      mrp:    iMRP   >= 0 ? (v[iMRP]   || '').trim() : '',
+      exp:    iExp   >= 0 ? (v[iExp]   || '').trim() : '',
+      wh:     iWH    >= 0 ? (v[iWH]    || '0').trim() : '0',
+      floor:  iFloor >= 0 ? (v[iFloor] || '0').trim() : '0',
+      style:  iStyle >= 0 ? (v[iStyle] || '').trim() : '',
     });
   }
   return rows;
@@ -103,12 +108,20 @@ async function refreshCache() {
       fetchStore('delhi'),
       fetchStore('pune'),
     ]);
-    cache.hyderabad   = hyd;
-    cache.delhi       = del;
-    cache.pune        = pun;
+    cache.hyderabad = hyd;
+    cache.delhi     = del;
+    cache.pune      = pun;
+
+    // Build sorted brand lists per store
+    for (const key of ['hyderabad', 'delhi', 'pune']) {
+      const brands = new Set();
+      for (const row of cache[key]) { if (row.brand) brands.add(row.brand); }
+      brandIndex[key] = [...brands].sort((a, b) => a.localeCompare(b));
+    }
+
     cache.lastFetched = new Date();
     cache.status      = 'ready';
-    console.log(`[cache] All done in ${Date.now()-t0}ms total | heap:${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB`);
+    console.log(`[cache] All done in ${Date.now()-t0}ms | heap:${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB`);
   } catch (err) {
     cache.status = 'error';
     console.error('[cache] Refresh failed:', err.message);
@@ -124,6 +137,7 @@ function scheduleDailyRefresh() {
   setTimeout(() => { refreshCache(); setInterval(refreshCache, 24 * 60 * 60 * 1000); }, ms);
 }
 
+// ── Search helpers ────────────────────────────────────────────────────────────
 function norm(s) { return (s || '').toLowerCase().trim(); }
 function tokenize(s) { return norm(s).split(/[\s\-_/]+/).filter(t => t.length > 0); }
 
@@ -166,6 +180,7 @@ function toCard(row, storeName) {
     barcode: row.bc, brand: row.brand, vendorArticleName: row.van,
     itemName: row.iname, size: row.size, mrp: row.mrp, expiryDate: row.exp,
     warehouseStock: row.wh, storeStock: row.floor, store: storeName,
+    styleId: row.style,
   };
 }
 
@@ -173,31 +188,21 @@ function hasStock(card) {
   return (parseInt(card.storeStock) || 0) > 0 || (parseInt(card.warehouseStock) || 0) > 0;
 }
 
-function searchRows(rows, q, type, storeName) {
-  const qn = norm(q);
-  const scored = [];
-  for (const row of rows) {
-    let score = 0;
-    if (type === 'barcode')      { if (norm(row.bc).includes(qn)) score = 100; }
-    else if (type === 'brand')   { score = fuzzyScore(q, row.brand); }
-    else if (type === 'product') { score = Math.max(fuzzyScore(q, row.iname), fuzzyScore(q, row.van)); }
-    if (score > 0) scored.push({ score, card: toCard(row, storeName) });
-  }
-  scored.sort((a, b) => {
-    const aS = hasStock(a.card) ? 1 : 0, bS = hasStock(b.card) ? 1 : 0;
-    if (bS !== aS) return bS - aS;
-    return b.score - a.score;
+function sortCards(cards) {
+  return cards.sort((a, b) => {
+    const aS = hasStock(a) ? 1 : 0, bS = hasStock(b) ? 1 : 0;
+    return bS - aS;
   });
-  return scored.map(s => s.card);
 }
+
+
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/status', (req, res) => {
   res.json({
-    status: cache.status,
-    lastFetched: cache.lastFetched,
+    status: cache.status, lastFetched: cache.lastFetched,
     counts: { hyderabad: cache.hyderabad.length, delhi: cache.delhi.length, pune: cache.pune.length },
     heapMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
   });
@@ -205,15 +210,46 @@ app.get('/api/status', (req, res) => {
 
 app.post('/api/refresh', (req, res) => { refreshCache(); res.json({ ok: true }); });
 
+// Brands list for a store
+app.get('/api/brands', (req, res) => {
+  const { store } = req.query;
+  if (!store) return res.status(400).json({ error: 'Missing store.' });
+  if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
+  res.json({ brands: brandIndex[store.toLowerCase()] || [] });
+});
+
 app.get('/api/search', (req, res) => {
   try {
-    const { q, type, store } = req.query;
-    if (!q || !type || !store) return res.status(400).json({ error: 'Missing q, type, or store.' });
+    const { q, brand, store } = req.query;
+    if (!q || !store) return res.status(400).json({ error: 'Missing q or store.' });
     if (cache.status === 'loading') return res.status(503).json({ error: 'Still loading — please wait.' });
     if (cache.status === 'error')   return res.status(503).json({ error: 'Data failed to load. Click Refresh.' });
     if (cache.status !== 'ready')   return res.status(503).json({ error: 'Not ready yet.' });
-    const pk = store.toLowerCase();
-    const primary = searchRows(cache[pk] || [], q, type, STORES[pk]?.label || pk);
+
+    const pk   = store.toLowerCase();
+    const rows = cache[pk] || [];
+    const storeName = STORES[pk]?.label || pk;
+
+    // Pre-filter by brand if provided
+    const pool = brand ? rows.filter(r => norm(r.brand) === norm(brand)) : rows;
+    const qn   = norm(q);
+    const scored = [];
+
+    for (const row of pool) {
+      // Barcode: substring match
+      let score = norm(row.bc).includes(qn) ? 100 : 0;
+      // Product name: fuzzy
+      if (score === 0) score = Math.max(fuzzyScore(q, row.iname), fuzzyScore(q, row.van));
+      if (score > 0) scored.push({ score, card: toCard(row, storeName) });
+    }
+
+    scored.sort((a, b) => {
+      const aS = hasStock(a.card) ? 1 : 0, bS = hasStock(b.card) ? 1 : 0;
+      if (bS !== aS) return bS - aS;
+      return b.score - a.score;
+    });
+
+    const primary = scored.map(s => s.card);
     res.json({ primary, total: primary.length, lastFetched: cache.lastFetched });
   } catch (err) {
     console.error('[search]', err);
@@ -221,9 +257,27 @@ app.get('/api/search', (req, res) => {
   }
 });
 
+// Style group search — all items with same Style Group ID
+app.get('/api/style', (req, res) => {
+  try {
+    const { styleId, store } = req.query;
+    if (!styleId || !store) return res.status(400).json({ error: 'Missing styleId or store.' });
+    if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
+    const pk = store.toLowerCase();
+    const storeName = STORES[pk]?.label || pk;
+    const sn = norm(styleId);
+    const results = cache[pk]
+      .filter(r => norm(r.style) === sn)
+      .map(r => toCard(r, storeName));
+    sortCards(results);
+    res.json({ items: results, total: results.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal error: ' + err.message });
+  }
+});
+
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((err, req, res, next) => {
-  console.error('[unhandled]', err);
   res.status(500).json({ error: 'Server error: ' + (err.message || 'Unknown') });
 });
 
@@ -243,7 +297,6 @@ function startKeepAlive() {
   console.log('[keep-alive] Started');
 }
 
-// ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
   console.log(`Server on port ${PORT}`);
   await refreshCache();
