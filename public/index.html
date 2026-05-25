@@ -54,12 +54,9 @@
   .section-label { font-size: 12px; font-weight: 700; color: #888;
                    text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 8px; }
 
-  /* Card */
   .card { background: #fff; border-radius: 14px; padding: 14px 16px;
-          margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07);
-          cursor: pointer; transition: box-shadow .15s; }
-  .card:active { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-  .card.stockout { opacity: .6; }
+          margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .card.stockout { opacity: .55; }
 
   .card-top { display: flex; justify-content: space-between; align-items: flex-start;
               gap: 8px; margin-bottom: 6px; }
@@ -70,31 +67,11 @@
   .card-meta { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.8; }
   .card-meta span { margin-right: 10px; }
 
-  .stock-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .stock-row { display: flex; gap: 8px; flex-wrap: wrap; }
   .badge { display: inline-flex; align-items: center; gap: 4px;
            padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
   .badge.green { background: #dcfce7; color: #16a34a; }
   .badge.red   { background: #fee2e2; color: #dc2626; }
-  .sizes-btn { margin-left: auto; font-size: 12px; color: #6366f1; font-weight: 600;
-               background: #eef2ff; border: none; padding: 5px 10px;
-               border-radius: 8px; cursor: pointer; white-space: nowrap; }
-
-  /* Sizes panel */
-  .sizes-panel { margin-top: 12px; border-top: 1px solid #f0f0f0; padding-top: 12px;
-                 display: none; }
-  .sizes-panel.open { display: block; }
-  .sizes-panel-title { font-size: 11px; font-weight: 700; color: #aaa;
-                       text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
-  .sizes-loading { text-align: center; padding: 12px; color: #aaa; font-size: 13px; }
-  .size-row { display: flex; align-items: center; justify-content: space-between;
-              padding: 7px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
-  .size-row:last-child { border-bottom: none; }
-  .size-label { font-weight: 600; color: #1a1a2e; flex: 1; }
-  .size-bc { color: #aaa; font-size: 11px; flex: 1; }
-  .size-badges { display: flex; gap: 6px; }
-  .size-badge { padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
-  .size-badge.green { background: #dcfce7; color: #16a34a; }
-  .size-badge.red   { background: #fee2e2; color: #dc2626; }
 
   .empty { text-align: center; padding: 48px 20px; color: #aaa; font-size: 15px; }
   .spinner { text-align: center; padding: 40px; }
@@ -161,7 +138,6 @@
     if (e.key === 'Enter' && cacheReady) doSearch();
   });
 
-  // ── Status / cache polling ──────────────────────────────────────────────────
   function setReady(counts, lastFetched) {
     cacheReady = true;
     const btn = document.getElementById('searchBtn');
@@ -173,7 +149,7 @@
     const t = new Date(lastFetched);
     const fmt = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
               + ' ' + t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-    document.getElementById('statusText').textContent = `${total} items · refreshed ${fmt}`;
+    document.getElementById('statusText').textContent = `${total.toLocaleString()} items · refreshed ${fmt}`;
   }
 
   function setLoading(msg) {
@@ -224,7 +200,10 @@
     } catch { setError('Refresh request failed'); }
   }
 
-  // ── Search ──────────────────────────────────────────────────────────────────
+  function hasStock(r) {
+    return (parseInt(r.storeStock) || 0) > 0 || (parseInt(r.warehouseStock) || 0) > 0;
+  }
+
   async function doSearch() {
     if (!cacheReady) return;
     const q     = document.getElementById('queryInput').value.trim();
@@ -245,19 +224,22 @@
         if (res.status === 503) { cacheReady = false; checkStatus(); }
         return;
       }
-      if (data.total === 0) { out.innerHTML = '<div class="empty">No matching items found</div>'; return; }
+      if (!data.primary || data.primary.length === 0) {
+        out.innerHTML = '<div class="empty">No matching items found</div>';
+        return;
+      }
 
-      const inStock  = data.primary.filter(r => hasStock(r));
+      const inStock  = data.primary.filter(r =>  hasStock(r));
       const outStock = data.primary.filter(r => !hasStock(r));
 
       let html = '';
       if (inStock.length) {
         html += `<div class="section-label">In Stock (${inStock.length})</div>`;
-        html += inStock.map(r => renderCard(r, store)).join('');
+        html += inStock.map(renderCard).join('');
       }
       if (outStock.length) {
         html += `<div class="section-label" style="color:#f87171">Out of Stock (${outStock.length})</div>`;
-        html += outStock.map(r => renderCard(r, store)).join('');
+        html += outStock.map(renderCard).join('');
       }
       out.innerHTML = html;
     } catch (e) {
@@ -265,67 +247,11 @@
     }
   }
 
-  function hasStock(r) {
-    return (parseInt(r.storeStock) || 0) > 0 || (parseInt(r.warehouseStock) || 0) > 0;
-  }
-
-  // ── Sizes panel ─────────────────────────────────────────────────────────────
-  async function toggleSizes(btn, itemName, van, store) {
-    const panel = btn.closest('.card').querySelector('.sizes-panel');
-    if (panel.classList.contains('open')) {
-      panel.classList.remove('open');
-      btn.textContent = '▼ All sizes';
-      return;
-    }
-    panel.classList.add('open');
-    btn.textContent = '▲ Hide sizes';
-
-    if (panel.dataset.loaded) return; // already fetched
-    panel.innerHTML = '<div class="sizes-panel-title">All Sizes</div><div class="sizes-loading">Loading…</div>';
-    panel.classList.add('open');
-
-    try {
-      const res = await fetch(`/api/sizes?itemName=${encodeURIComponent(itemName)}&van=${encodeURIComponent(van)}&store=${encodeURIComponent(store)}`);
-      const data = await res.json();
-      if (!res.ok || !data.sizes) { panel.innerHTML = '<div class="sizes-loading">Could not load sizes.</div>'; return; }
-
-      let html = '<div class="sizes-panel-title">All Sizes</div>';
-      if (data.sizes.length === 0) {
-        html += '<div class="sizes-loading">No other sizes found.</div>';
-      } else {
-        data.sizes.forEach(s => {
-          const f = parseInt(s.storeStock)  || 0;
-          const w = parseInt(s.warehouseStock) || 0;
-          html += `
-            <div class="size-row">
-              <span class="size-label">${s.size || '—'}</span>
-              <span class="size-bc">${s.barcode || ''}</span>
-              <div class="size-badges">
-                <span class="size-badge ${f > 0 ? 'green' : 'red'}">Floor: ${f}</span>
-                <span class="size-badge ${w > 0 ? 'green' : 'red'}">WH: ${w}</span>
-              </div>
-            </div>`;
-        });
-      }
-      panel.innerHTML = html;
-      panel.dataset.loaded = '1';
-    } catch (e) {
-      panel.innerHTML = '<div class="sizes-loading">Error loading sizes.</div>';
-    }
-  }
-
-  // ── Render card ─────────────────────────────────────────────────────────────
-  let cardIdx = 0;
-  function renderCard(r, store) {
+  function renderCard(r) {
     const name = r.itemName || r.vendorArticleName || r.barcode || '—';
     const f = parseInt(r.storeStock)     || 0;
     const w = parseInt(r.warehouseStock) || 0;
     const stockout = f === 0 && w === 0;
-    const id = 'card-' + (cardIdx++);
-
-    const iname = (r.itemName || '').replace(/'/g, "\\'");
-    const van   = (r.vendorArticleName || '').replace(/'/g, "\\'");
-
     return `
       <div class="card${stockout ? ' stockout' : ''}">
         <div class="card-top">
@@ -333,18 +259,16 @@
           <span class="store-tag">${r.store}</span>
         </div>
         <div class="card-meta">
-          ${r.barcode    ? `<span>📦 ${r.barcode}</span>`        : ''}
-          ${r.brand      ? `<span>🏷 ${r.brand}</span>`          : ''}
-          ${r.size       ? `<span>📐 ${r.size}</span>`           : ''}
-          ${r.mrp        ? `<span>₹ MRP ${r.mrp}</span>`         : ''}
-          ${r.expiryDate ? `<span>⏳ ${r.expiryDate}</span>`     : ''}
+          ${r.barcode    ? `<span>📦 ${r.barcode}</span>`       : ''}
+          ${r.brand      ? `<span>🏷 ${r.brand}</span>`         : ''}
+          ${r.size       ? `<span>📐 ${r.size}</span>`          : ''}
+          ${r.mrp        ? `<span>₹ MRP ${r.mrp}</span>`        : ''}
+          ${r.expiryDate ? `<span>⏳ ${r.expiryDate}</span>`    : ''}
         </div>
         <div class="stock-row">
           <span class="badge ${f > 0 ? 'green' : 'red'}">Floor: ${f}</span>
           <span class="badge ${w > 0 ? 'green' : 'red'}">WH: ${w}</span>
-          <button class="sizes-btn" onclick="event.stopPropagation(); toggleSizes(this, '${iname}', '${van}', '${store}')">▼ All sizes</button>
         </div>
-        <div class="sizes-panel" id="${id}-sizes"></div>
       </div>`;
   }
 
