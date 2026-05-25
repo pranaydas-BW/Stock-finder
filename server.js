@@ -17,45 +17,67 @@ function csvUrl(gid) {
   return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
 }
 
+// ── Only these columns are kept in memory — everything else is discarded ──────
+// Keeps memory ~70% lower than storing all 22 columns.
+const KEEP_COLS = new Set([
+  'BARCODE', 'Brand', 'Vendor Article Name', 'Item Name',
+  'Size', 'MRP', 'Expiry Date', 'Ware house stock', 'Store stock',
+]);
+
 // ── In-memory cache ───────────────────────────────────────────────────────────
 const cache = {
   hyderabad: [],
   delhi: [],
   pune: [],
   lastFetched: null,
-  status: 'empty',   // 'empty' | 'loading' | 'ready' | 'error'
+  status: 'empty',
 };
 
-function parseCSV(text) {
-  const lines = text.split('\n').filter(l => l.trim());
+// Parse CSV and keep ONLY the needed columns.
+// Returns array of lean objects: { bc, brand, van, iname, size, mrp, exp, wh, floor }
+function parseCSVLean(text) {
+  const lines = text.split('\n');
   if (lines.length < 2) return [];
 
-  // Parse a single CSV line respecting quoted fields
+  // Parse one CSV line, respecting quoted fields
   const parseLine = (line) => {
     const result = [];
-    let cur = '', inQuotes = false;
+    let cur = '', inQ = false;
     for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        inQuotes = !inQuotes;
-      } else if (ch === ',' && !inQuotes) {
-        result.push(cur.trim());
-        cur = '';
-      } else {
-        cur += ch;
-      }
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += c; }
     }
     result.push(cur.trim());
     return result;
   };
 
-  const headers = parseLine(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim());
-  const rows = [];
+  const rawHeaders = parseLine(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim());
 
+  // Build an index map: only for columns we want
+  const idx = {};
+  rawHeaders.forEach((h, i) => { if (KEEP_COLS.has(h)) idx[h] = i; });
+
+  const rows = [];
   for (let i = 1; i < lines.length; i++) {
-    const vals = parseLine(lines[i]);
-    const row = {};
-    headers.forEach((h, idx) => { row[h] = (vals[idx] || '').trim(); });
+    const line = lines[i];
+    if (!line.trim()) continue;
+    const v = parseLine(line);
+    // Store as a compact object with short keys to save memory
+    const row = {
+      bc:    (v[idx['BARCODE']]             || '').trim(),
+      brand: (v[idx['Brand']]               || '').trim(),
+      van:   (v[idx['Vendor Article Name']] || '').trim(),
+      iname: (v[idx['Item Name']]           || '').trim(),
+      size:  (v[idx['Size']]                || '').trim(),
+      mrp:   (v[idx['MRP']]                 || '').trim(),
+      exp:   (v[idx['Expiry Date']]         || '').trim(),
+      wh:    (v[idx['Ware house stock']]    || '0').trim(),
+      floor: (v[idx['Store stock']]         || '0').trim(),
+    };
+    // Skip completely empty rows
+    if (!row.bc && !row.iname && !row.van) continue;
     rows.push(row);
   }
   return rows;
@@ -63,59 +85,51 @@ function parseCSV(text) {
 
 async function fetchStore(storeKey) {
   const { gid, label } = STORES[storeKey];
-  const url = csvUrl(gid);
   console.log(`[cache] Fetching ${label}...`);
-  const res = await fetch(url);
+  const res = await fetch(csvUrl(gid));
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${label}`);
   const text = await res.text();
-  const rows = parseCSV(text);
-  console.log(`[cache] ${label}: ${rows.length} rows loaded`);
+  const rows = parseCSVLean(text);
+  console.log(`[cache] ${label}: ${rows.length} lean rows, ~${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB heap`);
   return rows;
 }
 
+// Fetch stores ONE AT A TIME to avoid 3× memory spike from parallel fetches
 async function refreshCache() {
   cache.status = 'loading';
   try {
-    const [hyd, del, pun] = await Promise.all([
-      fetchStore('hyderabad'),
-      fetchStore('delhi'),
-      fetchStore('pune'),
-    ]);
-    cache.hyderabad = hyd;
-    cache.delhi     = del;
-    cache.pune      = pun;
+    cache.hyderabad = await fetchStore('hyderabad');
+    cache.delhi     = await fetchStore('delhi');
+    cache.pune      = await fetchStore('pune');
     cache.lastFetched = new Date();
     cache.status = 'ready';
-    console.log(`[cache] All stores refreshed at ${cache.lastFetched.toISOString()}`);
+    console.log(`[cache] Done at ${cache.lastFetched.toISOString()}, heap: ~${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
   } catch (err) {
     cache.status = 'error';
     console.error('[cache] Refresh failed:', err.message);
   }
 }
 
-// Schedule daily refresh at 10:00 AM IST (04:30 UTC)
 function scheduleDailyRefresh() {
   const now = new Date();
-  const nextRefresh = new Date();
-  nextRefresh.setUTCHours(4, 30, 0, 0); // 10:00 AM IST = 04:30 UTC
-  if (nextRefresh <= now) nextRefresh.setUTCDate(nextRefresh.getUTCDate() + 1);
-  const msUntil = nextRefresh - now;
-  console.log(`[cache] Next auto-refresh in ${Math.round(msUntil / 60000)} minutes`);
+  const next = new Date();
+  next.setUTCHours(4, 30, 0, 0); // 10:00 AM IST
+  if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+  const ms = next - now;
+  console.log(`[cache] Next auto-refresh in ${Math.round(ms / 60000)} min`);
   setTimeout(() => {
     refreshCache();
-    setInterval(refreshCache, 24 * 60 * 60 * 1000); // then every 24h
-  }, msUntil);
+    setInterval(refreshCache, 24 * 60 * 60 * 1000);
+  }, ms);
 }
 
 // ── Search helpers ────────────────────────────────────────────────────────────
-function normalize(str) {
-  return (str || '').toLowerCase().trim();
-}
+function norm(s) { return (s || '').toLowerCase().trim(); }
 
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
   const dp = Array.from({ length: m + 1 }, (_, i) =>
-    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+    Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0)
   );
   for (let i = 1; i <= m; i++)
     for (let j = 1; j <= n; j++)
@@ -126,103 +140,117 @@ function levenshtein(a, b) {
 }
 
 function fuzzyMatch(query, target) {
-  const q = normalize(query), t = normalize(target);
+  const q = norm(query), t = norm(target);
   if (t.includes(q)) return true;
   if (q.length <= 3) return false;
-  // Allow 1 typo per 5 chars
-  const threshold = Math.floor(q.length / 5);
-  return levenshtein(q, t.slice(0, q.length + 2)) <= threshold;
+  return levenshtein(q, t.slice(0, q.length + 2)) <= Math.floor(q.length / 5);
 }
 
-function mapRow(row) {
+function toCard(row, storeName) {
   return {
-    itemCode:          row['Item Code']           || '',
-    barcode:           row['BARCODE']              || '',
-    brand:             row['Brand']               || '',
-    batchNo:           row['Batch no']            || '',
-    expiryDate:        row['Expiry Date']          || '',
-    vendorArticleId:   row['Vendor Article ID']   || '',
-    vendorArticleName: row['Vendor Article Name'] || '',
-    division:          row['Division']            || '',
-    section:           row['Section']             || '',
-    department:        row['Department']          || '',
-    itemName:          row['Item Name']           || '',
-    size:              row['Size']                || '',
-    mrp:               row['MRP']                 || '',
-    rsp:               row['RSP']                 || '',
-    warehouseStock:    row['Ware house stock']    || '0',
-    storeStock:        row['Store stock']         || '0',
-    salesQty60D:       row['Sales Qty (60D)']     || '0',
+    barcode:           row.bc,
+    brand:             row.brand,
+    vendorArticleName: row.van,
+    itemName:          row.iname,
+    size:              row.size,
+    mrp:               row.mrp,
+    expiryDate:        row.exp,
+    warehouseStock:    row.wh,
+    storeStock:        row.floor,
+    store:             storeName,
   };
 }
 
-function searchRows(rows, query, type) {
-  const q = normalize(query);
-  return rows
-    .filter(row => {
-      const r = mapRow(row);
-      if (type === 'barcode') return normalize(r.barcode).includes(q);
-      if (type === 'brand')   return normalize(r.brand).includes(q);
-      if (type === 'product') return fuzzyMatch(q, r.itemName) || fuzzyMatch(q, r.vendorArticleName);
-      return false;
-    })
-    .map(mapRow);
+function searchRows(rows, q, type, storeName) {
+  const qn = norm(q);
+  const results = [];
+  for (const row of rows) {
+    let match = false;
+    if (type === 'barcode') match = norm(row.bc).includes(qn);
+    else if (type === 'brand')   match = norm(row.brand).includes(qn);
+    else if (type === 'product') match = fuzzyMatch(q, row.iname) || fuzzyMatch(q, row.van);
+    if (match) results.push(toCard(row, storeName));
+  }
+  return results;
 }
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Cache status
 app.get('/api/status', (req, res) => {
   res.json({
     status: cache.status,
     lastFetched: cache.lastFetched,
     counts: {
       hyderabad: cache.hyderabad.length,
-      delhi: cache.delhi.length,
-      pune: cache.pune.length,
-    }
+      delhi:     cache.delhi.length,
+      pune:      cache.pune.length,
+    },
+    heapMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
   });
 });
 
-// Manual refresh (admin use)
-app.post('/api/refresh', async (req, res) => {
-  await refreshCache();
-  res.json({ ok: true, lastFetched: cache.lastFetched });
+app.post('/api/refresh', (req, res) => {
+  refreshCache();
+  res.json({ ok: true, message: 'Refresh started' });
 });
 
-// Search
 app.get('/api/search', (req, res) => {
-  const { q, type, store } = req.query;
-  if (!q || !type || !store) {
-    return res.status(400).json({ error: 'Missing q, type, or store' });
+  try {
+    const { q, type, store } = req.query;
+    if (!q || !type || !store)
+      return res.status(400).json({ error: 'Missing q, type, or store.' });
+    if (cache.status === 'loading')
+      return res.status(503).json({ error: 'Still loading — please wait a moment.' });
+    if (cache.status === 'error')
+      return res.status(503).json({ error: 'Data failed to load. Click ↺ Refresh.' });
+    if (cache.status !== 'ready')
+      return res.status(503).json({ error: 'Not ready yet.' });
+
+    const pk = store.toLowerCase();
+    const sks = Object.keys(STORES).filter(k => k !== pk);
+
+    const primary   = searchRows(cache[pk] || [], q, type, STORES[pk]?.label || pk);
+    const secondary = sks.flatMap(k => searchRows(cache[k] || [], q, type, STORES[k]?.label || k));
+
+    res.json({ primary, secondary, total: primary.length + secondary.length, lastFetched: cache.lastFetched });
+  } catch (err) {
+    console.error('[search]', err);
+    res.status(500).json({ error: 'Internal error: ' + err.message });
   }
-  if (cache.status !== 'ready') {
-    return res.status(503).json({ error: 'Data not ready yet', status: cache.status });
-  }
-
-  const primaryKey = store.toLowerCase();
-  const secondaryKeys = Object.keys(STORES).filter(k => k !== primaryKey);
-
-  const primaryResults   = searchRows(cache[primaryKey] || [], q, type)
-    .map(r => ({ ...r, store: STORES[primaryKey]?.label || primaryKey, isPrimary: true }));
-
-  const secondaryResults = secondaryKeys.flatMap(k =>
-    searchRows(cache[k] || [], q, type)
-      .map(r => ({ ...r, store: STORES[k]?.label || k, isPrimary: false }))
-  );
-
-  res.json({
-    primary: primaryResults,
-    secondary: secondaryResults,
-    total: primaryResults.length + secondaryResults.length,
-    lastFetched: cache.lastFetched,
-  });
 });
+
+app.use((req, res) => res.status(404).json({ error: 'Not found' }));
+app.use((err, req, res, next) => {
+  console.error('[unhandled]', err);
+  res.status(500).json({ error: 'Server error: ' + (err.message || 'Unknown') });
+});
+
+// ── Keep-alive (8 AM–10 PM IST, every 14 min) ────────────────────────────────
+function startKeepAlive() {
+  const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
+  if (!RENDER_URL) { console.log('[keep-alive] No RENDER_EXTERNAL_URL — skipping'); return; }
+
+  const isActive = () => {
+    const m = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
+    return m >= 150 && m <= 990;
+  };
+
+  setInterval(async () => {
+    if (!isActive()) { console.log('[keep-alive] Outside hours'); return; }
+    try {
+      const r = await fetch(`${RENDER_URL}/api/status`);
+      console.log(`[keep-alive] Ping ${r.status}`);
+    } catch (e) { console.warn('[keep-alive] Failed:', e.message); }
+  }, 14 * 60 * 1000);
+
+  console.log('[keep-alive] Started');
+}
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-  await refreshCache();       // load data immediately on boot
-  scheduleDailyRefresh();     // then auto-refresh at 10 AM IST daily
+  console.log(`Server on port ${PORT}`);
+  await refreshCache();
+  scheduleDailyRefresh();
+  startKeepAlive();
 });

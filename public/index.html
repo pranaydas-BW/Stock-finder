@@ -13,7 +13,7 @@
            display: flex; align-items: center; gap: 12px; }
   header h1 { font-size: 18px; font-weight: 700; }
   .store-dot { width: 10px; height: 10px; border-radius: 50%;
-               background: #4ade80; flex-shrink: 0; }
+               background: #facc15; flex-shrink: 0; transition: background .4s; }
 
   .controls { background: #fff; padding: 16px 20px;
               box-shadow: 0 1px 4px rgba(0,0,0,.08); }
@@ -31,8 +31,9 @@
 
   button.search-btn { width: 100%; padding: 13px; background: #6366f1; color: #fff;
                       border: none; border-radius: 10px; font-size: 16px;
-                      font-weight: 700; cursor: pointer; }
-  button.search-btn:active { background: #4f52d9; }
+                      font-weight: 700; cursor: pointer; transition: background .15s; }
+  button.search-btn:disabled { background: #a5a7f5; cursor: not-allowed; }
+  button.search-btn:not(:disabled):active { background: #4f52d9; }
 
   .status-bar { padding: 8px 20px; font-size: 12px; color: #888;
                 background: #fff; border-top: 1px solid #f0f0f0;
@@ -42,11 +43,19 @@
                  border-radius: 6px; font-weight: 600; }
   .refresh-btn:hover { background: #eef2ff; }
 
+  /* Loading banner shown while cache is warming up */
+  .loading-banner { background: #fefce8; border: 1px solid #fde047;
+                    color: #854d0e; padding: 12px 20px; font-size: 13px;
+                    display: flex; align-items: center; gap: 10px; }
+  .loading-banner.hidden { display: none; }
+  .mini-spin { width: 16px; height: 16px; border: 2px solid #fde047;
+               border-top-color: #854d0e; border-radius: 50%;
+               animation: spin .7s linear infinite; flex-shrink: 0; }
+
   .results { padding: 16px 16px 32px; }
 
   .section-label { font-size: 12px; font-weight: 700; color: #888;
-                   text-transform: uppercase; letter-spacing: .5px;
-                   margin: 12px 0 8px; }
+                   text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 8px; }
   .section-label.secondary { color: #aaa; }
 
   .card { background: #fff; border-radius: 14px; padding: 14px 16px;
@@ -57,11 +66,10 @@
               gap: 8px; margin-bottom: 8px; }
   .item-name { font-size: 15px; font-weight: 700; color: #1a1a2e; flex: 1; }
   .store-tag { font-size: 11px; font-weight: 700; padding: 3px 8px;
-               border-radius: 20px; background: #eef2ff; color: #6366f1;
-               white-space: nowrap; }
+               border-radius: 20px; background: #eef2ff; color: #6366f1; white-space: nowrap; }
   .store-tag.secondary { background: #f5f5f5; color: #888; }
 
-  .card-meta { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.6; }
+  .card-meta { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.8; }
   .card-meta span { margin-right: 10px; }
 
   .stock-row { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -71,14 +79,14 @@
   .badge.red   { background: #fee2e2; color: #dc2626; }
 
   .empty { text-align: center; padding: 48px 20px; color: #aaa; font-size: 15px; }
-  .spinner { text-align: center; padding: 40px; color: #aaa; }
+  .spinner { text-align: center; padding: 40px; }
   .spinner::after { content: ''; display: inline-block; width: 28px; height: 28px;
                     border: 3px solid #eee; border-top-color: #6366f1;
                     border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .error-msg { background: #fee2e2; color: #dc2626; padding: 12px 16px;
-               border-radius: 10px; margin: 16px; font-size: 14px; }
+               border-radius: 10px; margin: 0; font-size: 14px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -101,12 +109,18 @@
     <div class="tab" data-type="product">Product</div>
   </div>
 
-  <input type="text" id="queryInput" placeholder="Type to search…" autocomplete="off"/>
-  <button class="search-btn" onclick="doSearch()">Search</button>
+  <input type="text" id="queryInput" placeholder="Enter barcode…" autocomplete="off"/>
+  <button class="search-btn" id="searchBtn" onclick="doSearch()" disabled>Loading data…</button>
+</div>
+
+<!-- Shown only while cache is warming up -->
+<div class="loading-banner" id="loadingBanner">
+  <div class="mini-spin"></div>
+  <span id="loadingText">Loading inventory data from Google Sheets — this takes ~10 seconds on first load…</span>
 </div>
 
 <div class="status-bar">
-  <span id="statusText">Loading data…</span>
+  <span id="statusText">Connecting…</span>
   <button class="refresh-btn" onclick="forceRefresh()">↺ Refresh</button>
 </div>
 
@@ -116,8 +130,9 @@
 
 <script>
   let selectedType = 'barcode';
+  let cacheReady = false;
+  let statusPollTimer = null;
 
-  // Tab selection
   document.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
@@ -128,56 +143,100 @@
     });
   });
 
-  // Enter key
   document.getElementById('queryInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doSearch();
+    if (e.key === 'Enter' && cacheReady) doSearch();
   });
 
-  // Status check
+  function setReady(counts, lastFetched) {
+    cacheReady = true;
+    const btn = document.getElementById('searchBtn');
+    btn.disabled = false;
+    btn.textContent = 'Search';
+    document.getElementById('loadingBanner').classList.add('hidden');
+    document.getElementById('dotEl').style.background = '#4ade80';
+
+    const total = (counts.hyderabad || 0) + (counts.delhi || 0) + (counts.pune || 0);
+    const t = new Date(lastFetched);
+    const fmt = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+              + ' ' + t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    document.getElementById('statusText').textContent = `${total} items loaded · refreshed ${fmt}`;
+  }
+
+  function setLoading(msg) {
+    cacheReady = false;
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('searchBtn').textContent = 'Loading data…';
+    document.getElementById('loadingBanner').classList.remove('hidden');
+    document.getElementById('loadingText').textContent = msg || 'Loading inventory data…';
+    document.getElementById('dotEl').style.background = '#facc15';
+    document.getElementById('statusText').textContent = 'Loading…';
+  }
+
+  function setError(msg) {
+    cacheReady = false;
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('searchBtn').textContent = 'Data unavailable';
+    document.getElementById('loadingBanner').classList.add('hidden');
+    document.getElementById('dotEl').style.background = '#f87171';
+    document.getElementById('statusText').textContent = msg || 'Load error — click ↺ Refresh';
+  }
+
   async function checkStatus() {
     try {
       const r = await fetch('/api/status');
+      if (!r.ok) { setError('Server error — click ↺ Refresh'); return; }
       const d = await r.json();
-      const el = document.getElementById('statusText');
-      const dot = document.getElementById('dotEl');
+
       if (d.status === 'ready') {
-        const t = new Date(d.lastFetched);
-        const fmt = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-                  + ' ' + t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        el.textContent = `Data loaded · ${d.counts.hyderabad + d.counts.delhi + d.counts.pune} items · refreshed ${fmt}`;
-        dot.style.background = '#4ade80';
+        setReady(d.counts, d.lastFetched);
+        if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
       } else if (d.status === 'loading') {
-        el.textContent = 'Loading data from sheet…';
-        dot.style.background = '#facc15';
-        setTimeout(checkStatus, 2000);
+        setLoading('Loading inventory data from Google Sheets — please wait…');
+        if (!statusPollTimer) statusPollTimer = setInterval(checkStatus, 2500);
+      } else if (d.status === 'error') {
+        setError('Failed to load data — click ↺ Refresh to retry');
+        if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
       } else {
-        el.textContent = 'Data load error — try refreshing';
-        dot.style.background = '#f87171';
+        setLoading('Initialising…');
+        if (!statusPollTimer) statusPollTimer = setInterval(checkStatus, 2500);
       }
-    } catch { setTimeout(checkStatus, 3000); }
+    } catch (e) {
+      setError('Cannot reach server');
+      // retry in 5s
+      setTimeout(checkStatus, 5000);
+    }
   }
 
   async function forceRefresh() {
-    document.getElementById('statusText').textContent = 'Refreshing…';
-    await fetch('/api/refresh', { method: 'POST' });
-    checkStatus();
+    setLoading('Refreshing data from Google Sheets…');
+    try {
+      await fetch('/api/refresh', { method: 'POST' });
+      // Poll until ready
+      if (!statusPollTimer) statusPollTimer = setInterval(checkStatus, 2500);
+    } catch (e) {
+      setError('Refresh request failed');
+    }
   }
 
   async function doSearch() {
+    if (!cacheReady) return;
     const q     = document.getElementById('queryInput').value.trim();
     const store = document.getElementById('storeSelect').value;
-    const type  = selectedType;
     if (!q) return;
 
     const out = document.getElementById('results');
     out.innerHTML = '<div class="spinner"></div>';
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}&store=${store}`);
-      const data = await res.json();
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&type=${selectedType}&store=${store}`);
+      let data;
+      try { data = await res.json(); }
+      catch { out.innerHTML = '<div class="results"><div class="error-msg">Server returned an unexpected response. Please try again.</div></div>'; return; }
 
       if (!res.ok) {
-        out.innerHTML = `<div class="error-msg">${data.error || 'Search failed'}</div>`;
+        out.innerHTML = `<div class="results"><div class="error-msg">${data.error || 'Search failed. Please try again.'}</div></div>`;
+        // If data not ready, start polling again
+        if (res.status === 503) { cacheReady = false; checkStatus(); }
         return;
       }
 
@@ -188,44 +247,39 @@
 
       let html = '';
       if (data.primary.length) {
-        html += `<div class="section-label">Selected Store (${data.primary[0].store})</div>`;
-        html += data.primary.map(renderCard).join('');
+        html += `<div class="section-label">Selected Store (${data.primary[0].store}) — ${data.primary.length} result${data.primary.length !== 1 ? 's' : ''}</div>`;
+        html += data.primary.map(r => renderCard(r, false)).join('');
       }
       if (data.secondary.length) {
-        html += `<div class="section-label secondary">Other Stores</div>`;
+        html += `<div class="section-label secondary">Other Stores — ${data.secondary.length} result${data.secondary.length !== 1 ? 's' : ''}</div>`;
         html += data.secondary.map(r => renderCard(r, true)).join('');
       }
       out.innerHTML = html;
     } catch (e) {
-      out.innerHTML = `<div class="error-msg">Network error: ${e.message}</div>`;
+      out.innerHTML = `<div class="results"><div class="error-msg">Network error: ${e.message}</div></div>`;
     }
   }
 
   function badge(label, qty) {
     const n = parseInt(qty) || 0;
-    const cls = n > 0 ? 'green' : 'red';
-    return `<span class="badge ${cls}">${label}: ${n}</span>`;
+    return `<span class="badge ${n > 0 ? 'green' : 'red'}">${label}: ${n}</span>`;
   }
 
-  function renderCard(r, secondary = false) {
+  function renderCard(r, secondary) {
     const name = r.itemName || r.vendorArticleName || r.barcode || '—';
-    const storeTagCls = secondary ? 'store-tag secondary' : 'store-tag';
-    const cardCls = secondary ? 'card secondary' : 'card';
-    const meta = [
-      r.barcode   ? `<span>📦 ${r.barcode}</span>`            : '',
-      r.brand     ? `<span>🏷 ${r.brand}</span>`              : '',
-      r.size      ? `<span>📐 Size: ${r.size}</span>`         : '',
-      r.mrp       ? `<span>₹ MRP ${r.mrp}</span>`            : '',
-      r.expiryDate? `<span>⏳ Exp: ${r.expiryDate}</span>`    : '',
-    ].filter(Boolean).join('');
-
     return `
-      <div class="${cardCls}">
+      <div class="card${secondary ? ' secondary' : ''}">
         <div class="card-top">
           <div class="item-name">${name}</div>
-          <span class="${storeTagCls}">${r.store}</span>
+          <span class="store-tag${secondary ? ' secondary' : ''}">${r.store}</span>
         </div>
-        <div class="card-meta">${meta}</div>
+        <div class="card-meta">
+          ${r.barcode    ? `<span>📦 ${r.barcode}</span>`         : ''}
+          ${r.brand      ? `<span>🏷 ${r.brand}</span>`           : ''}
+          ${r.size       ? `<span>📐 ${r.size}</span>`            : ''}
+          ${r.mrp        ? `<span>₹ MRP ${r.mrp}</span>`          : ''}
+          ${r.expiryDate ? `<span>⏳ Exp: ${r.expiryDate}</span>` : ''}
+        </div>
         <div class="stock-row">
           ${badge('Floor', r.storeStock)}
           ${badge('WH', r.warehouseStock)}
@@ -233,6 +287,7 @@
       </div>`;
   }
 
+  // Kick off
   checkStatus();
 </script>
 </body>
