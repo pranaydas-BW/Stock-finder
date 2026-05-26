@@ -284,7 +284,6 @@
   let scannerActive  = false;
 
   async function openScanner() {
-    // Check camera permission / availability
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       alert('Camera not supported on this browser. Please use Chrome or Safari on your phone.');
       return;
@@ -294,9 +293,7 @@
     scannerActive = true;
 
     try {
-      // Use ZXing's BrowserMultiFormatReader which handles all barcode types
       const hints = new Map();
-      // Prefer common retail formats for speed
       const formats = [
         ZXing.BarcodeFormat.EAN_13,
         ZXing.BarcodeFormat.EAN_8,
@@ -309,34 +306,48 @@
       hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
 
       scannerReader = new ZXing.BrowserMultiFormatReader(hints);
-
       const videoEl = document.getElementById('scannerVideo');
 
-      // Get back camera on mobile
-      const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-      let deviceId;
-      if (devices.length > 0) {
-        // Prefer back camera
-        const back = devices.find(d =>
-          /back|rear|environment/i.test(d.label)
-        );
-        deviceId = back ? back.deviceId : devices[devices.length - 1].deviceId;
+      // Use environment-facing (back) camera via constraints directly
+      // This is the correct approach for v0.21 on mobile Safari/Chrome
+      let deviceId = undefined;
+      try {
+        const allDevices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = allDevices.filter(d => d.kind === 'videoinput');
+        if (videoDevices.length > 0) {
+          // Pick back camera by label, else last device (usually back on mobile)
+          const back = videoDevices.find(d => /back|rear|environment/i.test(d.label));
+          deviceId = back ? back.deviceId : videoDevices[videoDevices.length - 1].deviceId;
+        }
+      } catch (e) {
+        // enumerateDevices may fail before permission granted — fall through,
+        // decodeFromConstraints will request permission and use back camera
+        deviceId = undefined;
       }
 
-      await scannerReader.decodeFromVideoDevice(deviceId, videoEl, (result, err) => {
-        if (!scannerActive) return;
-        if (result) {
-          const code = result.getText();
-          onBarcodeScanned(code);
-        }
-        // Errors are expected on frames with no barcode — ignore them silently
-      });
+      if (deviceId) {
+        // Decode from specific device
+        await scannerReader.decodeFromVideoDevice(deviceId, videoEl, (result, err) => {
+          if (!scannerActive) return;
+          if (result) onBarcodeScanned(result.getText());
+        });
+      } else {
+        // Fallback: use environment constraint (triggers back camera on iOS/Android)
+        await scannerReader.decodeFromConstraints(
+          { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+          videoEl,
+          (result, err) => {
+            if (!scannerActive) return;
+            if (result) onBarcodeScanned(result.getText());
+          }
+        );
+      }
 
     } catch (err) {
       console.error('Scanner error:', err);
       closeScanner();
-      if (err.name === 'NotAllowedError') {
-        alert('Camera access denied. Please allow camera access in your browser settings.');
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        alert('Camera access denied. Please allow camera access in your browser settings and try again.');
       } else {
         alert('Could not start camera: ' + err.message);
       }
