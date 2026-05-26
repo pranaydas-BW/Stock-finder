@@ -4,9 +4,11 @@
   "description": "Retail inventory search",
   "main": "server.js",
   "scripts": {
-    "start": "node --max-old-space-size=400 server.js"
+    "start": "node --max-old-space-size=400 server.js",
+    "postinstall": "cp node_modules/@zxing/library/umd/index.min.js public/zxing.min.js"
   },
   "dependencies": {
+    "@zxing/library": "0.21.3",
     "express": "^4.18.2",
     "node-fetch": "^2.7.0"
   }
