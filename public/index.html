@@ -143,6 +143,7 @@
            padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
   .badge.green { background: #dcfce7; color: #16a34a; }
   .badge.red   { background: #fee2e2; color: #dc2626; }
+  .badge.fresh { background: #d1fae5; color: #065f46; }
   .style-btn { margin-left: auto; font-size: 12px; color: #6366f1; font-weight: 600;
                background: #eef2ff; border: none; padding: 5px 10px;
                border-radius: 8px; cursor: pointer; white-space: nowrap; }
@@ -574,12 +575,29 @@
     }
   }
 
+  function isFresh(dateStr) {
+    if (!dateStr) return false;
+    let d;
+    const s = dateStr.trim();
+    // Handle DD-MM-YYYY or DD/MM/YYYY
+    if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(s)) {
+      const [day, mon, yr] = s.split(/[-\/]/);
+      d = new Date(`${yr}-${mon}-${day}`);
+    } else {
+      d = new Date(s);
+    }
+    if (isNaN(d)) return false;
+    const diffDays = (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= 60;
+  }
+
   function renderCard(r) {
     const name    = r.itemName || r.vendorArticleName || r.barcode || '—';
     const f       = parseInt(r.storeStock)     || 0;
     const w       = parseInt(r.warehouseStock) || 0;
     const stockout = f === 0 && w === 0;
     const store   = document.getElementById('storeSelect').value;
+    const fresh   = isFresh(r.firstGrnDate);
     const styleBtn = r.styleId
       ? `<button class="style-btn" onclick="openStyleModal('${r.styleId.replace(/'/g,"\\'")}','${store}')">🔗 Style group</button>`
       : '';
@@ -596,10 +614,12 @@
           ${r.mrp        ? `<span>₹ ${r.mrp}</span>`         : ''}
           ${r.styleId    ? `<span>🆔 ${r.styleId}</span>`    : ''}
           ${r.expiryDate ? `<span>⏳ ${r.expiryDate}</span>` : ''}
+          ${fresh        ? `<span>🟢 First GRN: ${r.firstGrnDate}</span>` : ''}
         </div>
         <div class="stock-row">
           <span class="badge ${f>0?'green':'red'}">Floor: ${f}</span>
           <span class="badge ${w>0?'green':'red'}">WH: ${w}</span>
+          ${fresh ? `<span class="badge fresh">✨ Fresh</span>` : ''}
           ${styleBtn}
         </div>
       </div>`;
