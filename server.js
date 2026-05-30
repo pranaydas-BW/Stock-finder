@@ -19,6 +19,7 @@ function csvUrl(gid) {
 const KEEP_COLS = new Set([
   'BARCODE', 'Brand', 'Vendor Article Name', 'Item Name',
   'Size', 'MRP', 'Expiry Date', 'Ware house stock', 'Store stock', 'Style Group ID',
+  'First GRN Date',
 ]);
 
 const cache = { hyderabad: [], delhi: [], pune: [], lastFetched: null, status: 'empty' };
@@ -48,16 +49,17 @@ function parseCSVLean(text) {
   const idx = {};
   rawHeaders.forEach((h, i) => { if (KEEP_COLS.has(h)) idx[h] = i; });
 
-  const iBC     = idx['BARCODE']             ?? -1;
-  const iBrand  = idx['Brand']               ?? -1;
-  const iVAN    = idx['Vendor Article Name'] ?? -1;
-  const iName   = idx['Item Name']           ?? -1;
-  const iSize   = idx['Size']                ?? -1;
-  const iMRP    = idx['MRP']                 ?? -1;
-  const iExp    = idx['Expiry Date']         ?? -1;
-  const iWH     = idx['Ware house stock']    ?? -1;
-  const iFloor  = idx['Store stock']         ?? -1;
-  const iStyle  = idx['Style Group ID']      ?? -1;
+  const iBC       = idx['BARCODE']             ?? -1;
+  const iBrand    = idx['Brand']               ?? -1;
+  const iVAN      = idx['Vendor Article Name'] ?? -1;
+  const iName     = idx['Item Name']           ?? -1;
+  const iSize     = idx['Size']                ?? -1;
+  const iMRP      = idx['MRP']                 ?? -1;
+  const iExp      = idx['Expiry Date']         ?? -1;
+  const iWH       = idx['Ware house stock']    ?? -1;
+  const iFloor    = idx['Store stock']         ?? -1;
+  const iStyle    = idx['Style Group ID']      ?? -1;
+  const iFirstGRN = idx['First GRN Date']      ?? -1;
 
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
@@ -70,15 +72,16 @@ function parseCSVLean(text) {
     if (!bc && !iname && !van) continue;
     rows.push({
       bc,
-      brand:  iBrand >= 0 ? (v[iBrand] || '').trim() : '',
+      brand:    iBrand    >= 0 ? (v[iBrand]    || '').trim() : '',
       van,
       iname,
-      size:   iSize  >= 0 ? (v[iSize]  || '').trim() : '',
-      mrp:    iMRP   >= 0 ? (v[iMRP]   || '').trim() : '',
-      exp:    iExp   >= 0 ? (v[iExp]   || '').trim() : '',
-      wh:     iWH    >= 0 ? (v[iWH]    || '0').trim() : '0',
-      floor:  iFloor >= 0 ? (v[iFloor] || '0').trim() : '0',
-      style:  iStyle >= 0 ? (v[iStyle] || '').trim() : '',
+      size:     iSize     >= 0 ? (v[iSize]     || '').trim() : '',
+      mrp:      iMRP      >= 0 ? (v[iMRP]      || '').trim() : '',
+      exp:      iExp      >= 0 ? (v[iExp]       || '').trim() : '',
+      wh:       iWH       >= 0 ? (v[iWH]        || '0').trim() : '0',
+      floor:    iFloor    >= 0 ? (v[iFloor]     || '0').trim() : '0',
+      style:    iStyle    >= 0 ? (v[iStyle]     || '').trim() : '',
+      firstGrn: iFirstGRN >= 0 ? (v[iFirstGRN]  || '').trim() : '',
     });
   }
   return rows;
@@ -180,7 +183,7 @@ function toCard(row, storeName) {
     barcode: row.bc, brand: row.brand, vendorArticleName: row.van,
     itemName: row.iname, size: row.size, mrp: row.mrp, expiryDate: row.exp,
     warehouseStock: row.wh, storeStock: row.floor, store: storeName,
-    styleId: row.style,
+    styleId: row.style, firstGrnDate: row.firstGrn,
   };
 }
 
