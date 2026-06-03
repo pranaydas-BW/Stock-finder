@@ -273,7 +273,7 @@
     <label>Brand <span style="font-weight:400;text-transform:none">(optional)</span></label>
     <div class="brand-wrap">
       <input type="text" id="browseBrandInput" placeholder="Type to filter by brand…"
-             autocomplete="off" oninput="onBrowseBrandInput()" onkeydown="onBrowseBrandKey(event)" onfocus="openBrowseBrandDropdown()"/>
+             autocomplete="off" oninput="onBrowseBrandInput()" onkeydown="onBrowseBrandKey(event)" onfocus="openBrowseBrandDropdown()" onclick="openBrowseBrandDropdown()"/>
       <button class="brand-clear" id="browseBrandClear" onclick="clearBrowseBrand()">✕</button>
       <div class="brand-dropdown" id="browseBrandDropdown"></div>
     </div>
@@ -448,7 +448,7 @@ function onBrandInput() {
   document.getElementById('brandClear').classList.remove('visible');
   renderBrandDropdown();
 }
-function openBrandDropdown() { if (allBrands.length) renderBrandDropdown(); }
+async function openBrandDropdown() { if (!allBrands.length) await loadBrands(); renderBrandDropdown(); }
 function renderBrandDropdown() {
   const q = document.getElementById('brandInput').value.toLowerCase();
   const dd = document.getElementById('brandDropdown');
@@ -514,16 +514,16 @@ async function onDivChange() {
   depSel.innerHTML = '<option value="">All Departments</option>';
   depSel.disabled = true;
 
-  if (!browseDiv) { secSel.disabled = true; return; }
+  if (!browseDiv) { secSel.disabled = true; loadBrowseSizes(); return; }
   secSel.disabled = false;
   const store = document.getElementById('storeSelect').value;
   try {
     const r = await fetch(`/api/taxonomy?store=${store}&div=${encodeURIComponent(browseDiv)}`);
     const d = await r.json();
-    secSel.innerHTML = '<option value="">All Sections</option>'
+    secSel.innerHTML = '<option value="">Select Section…</option>'
       + (d.sections||[]).map(v => `<option value="${v}">${v}</option>`).join('');
   } catch {}
-  loadBrowseSizes();
+  await loadBrowseSizes();
 }
 
 async function onSecChange() {
@@ -532,8 +532,11 @@ async function onSecChange() {
   const depSel = document.getElementById('depSelect');
   depSel.innerHTML = '<option value="">All Departments</option>';
 
-  if (!browseSec) { depSel.disabled = true; return; }
+  if (!browseSec) { depSel.disabled = true; await loadBrowseSizes(); return; }
   depSel.disabled = false;
+  // Enable browse button now that both div+sec are selected
+  document.getElementById('browseBtn').disabled = false;
+  document.getElementById('browseBtn').textContent = 'Browse Brands';
   const store = document.getElementById('storeSelect').value;
   try {
     const r = await fetch(`/api/taxonomy?store=${store}&div=${encodeURIComponent(browseDiv)}&sec=${encodeURIComponent(browseSec)}`);
@@ -541,7 +544,7 @@ async function onSecChange() {
     depSel.innerHTML = '<option value="">All Departments</option>'
       + (d.departments||[]).map(v => `<option value="${v}">${v}</option>`).join('');
   } catch {}
-  loadBrowseSizes();
+  await loadBrowseSizes();
 }
 
 function resetBrowseFilters() {
@@ -562,12 +565,14 @@ async function loadBrowseSizes() {
   if (browseDiv) params.set('div', browseDiv);
   if (browseSec) params.set('sec', browseSec);
   if (browseDep) params.set('dep', browseDep);
+  console.log('[sizes] fetching with', params.toString());
   try {
     const r = await fetch(`/api/sizes-list?${params}`);
     const d = await r.json();
+    console.log('[sizes] got', d.sizes?.length, 'sizes');
     sel.innerHTML = '<option value="">All Sizes</option>'
       + (d.sizes||[]).map(s => `<option value="${s}"${s===current?' selected':''}>${s}</option>`).join('');
-  } catch { sel.innerHTML = '<option value="">All Sizes</option>'; }
+  } catch(e) { console.error('[sizes] error', e); sel.innerHTML = '<option value="">All Sizes</option>'; }
 }
 
 function onDepChange() {
