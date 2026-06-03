@@ -23,59 +23,69 @@ const KEEP_COLS = new Set([
 ]);
 
 const cache = { hyderabad: [], delhi: [], pune: [], lastFetched: null, status: 'empty' };
+
+// Per-store brand index: { storeName: Set<brand> }
 const brandIndex = { hyderabad: [], delhi: [], pune: [] };
-const taxIndex   = { hyderabad: {}, delhi: {}, pune: {} };
 
 function parseCSVLean(text) {
   const lines = text.split('\n');
   if (lines.length < 2) return [];
+
   const splitLine = (line) => {
-    const cols = []; let start = 0, inQ = false;
+    const cols = [];
+    let start = 0, inQ = false;
     for (let i = 0; i <= line.length; i++) {
       const c = line[i];
       if (c === '"') { inQ = !inQ; continue; }
       if ((c === ',' || i === line.length) && !inQ) {
-        cols.push(line.slice(start, i).replace(/^"|"$/g, '').trim()); start = i + 1;
+        cols.push(line.slice(start, i).replace(/^"|"$/g, '').trim());
+        start = i + 1;
       }
     }
     return cols;
   };
+
   const rawHeaders = splitLine(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim());
   const idx = {};
   rawHeaders.forEach((h, i) => { if (KEEP_COLS.has(h)) idx[h] = i; });
-  const iBC    = idx['BARCODE']             ?? -1;
-  const iBrand = idx['Brand']               ?? -1;
-  const iVAN   = idx['Vendor Article Name'] ?? -1;
-  const iName  = idx['Item Name']           ?? -1;
-  const iSize  = idx['Size']                ?? -1;
-  const iMRP   = idx['MRP']                 ?? -1;
-  const iExp   = idx['Expiry Date']         ?? -1;
-  const iWH    = idx['Ware house stock']    ?? -1;
-  const iFloor = idx['Store stock']         ?? -1;
-  const iStyle = idx['Style Group ID']      ?? -1;
-  const iDiv   = idx['Division']            ?? -1;
-  const iSec   = idx['Section']             ?? -1;
-  const iDep   = idx['Department']          ?? -1;
+
+  const iBC     = idx['BARCODE']             ?? -1;
+  const iBrand  = idx['Brand']               ?? -1;
+  const iVAN    = idx['Vendor Article Name'] ?? -1;
+  const iName   = idx['Item Name']           ?? -1;
+  const iSize   = idx['Size']                ?? -1;
+  const iMRP    = idx['MRP']                 ?? -1;
+  const iExp    = idx['Expiry Date']         ?? -1;
+  const iWH     = idx['Ware house stock']    ?? -1;
+  const iFloor  = idx['Store stock']         ?? -1;
+  const iStyle  = idx['Style Group ID']      ?? -1;
+  const iDiv    = idx['Division']             ?? -1;
+  const iSec    = idx['Section']              ?? -1;
+  const iDep    = idx['Department']           ?? -1;
+
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i]; if (!line.trim()) continue;
+    const line = lines[i];
+    if (!line.trim()) continue;
     const v = splitLine(line);
     const bc    = iBC   >= 0 ? (v[iBC]   || '').trim() : '';
     const iname = iName >= 0 ? (v[iName] || '').trim() : '';
     const van   = iVAN  >= 0 ? (v[iVAN]  || '').trim() : '';
     if (!bc && !iname && !van) continue;
     rows.push({
-      bc, van, iname,
-      brand: iBrand >= 0 ? (v[iBrand] || '').trim() : '',
-      size:  iSize  >= 0 ? (v[iSize]  || '').trim() : '',
-      mrp:   iMRP   >= 0 ? (v[iMRP]   || '').trim() : '',
-      exp:   iExp   >= 0 ? (v[iExp]   || '').trim() : '',
-      wh:    iWH    >= 0 ? (v[iWH]    || '0').trim() : '0',
-      floor: iFloor >= 0 ? (v[iFloor] || '0').trim() : '0',
-      style: iStyle >= 0 ? (v[iStyle] || '').trim() : '',
-      div:   iDiv   >= 0 ? (v[iDiv]   || '').trim() : '',
-      sec:   iSec   >= 0 ? (v[iSec]   || '').trim() : '',
-      dep:   iDep   >= 0 ? (v[iDep]   || '').trim() : '',
+      bc,
+      brand:  iBrand >= 0 ? (v[iBrand] || '').trim() : '',
+      van,
+      iname,
+      size:   iSize  >= 0 ? (v[iSize]  || '').trim() : '',
+      mrp:    iMRP   >= 0 ? (v[iMRP]   || '').trim() : '',
+      exp:    iExp   >= 0 ? (v[iExp]   || '').trim() : '',
+      wh:     iWH    >= 0 ? (v[iWH]    || '0').trim() : '0',
+      floor:  iFloor >= 0 ? (v[iFloor] || '0').trim() : '0',
+      style:  iStyle >= 0 ? (v[iStyle] || '').trim() : '',
+      div:    iDiv   >= 0 ? (v[iDiv]   || '').trim() : '',
+      sec:    iSec   >= 0 ? (v[iSec]   || '').trim() : '',
+      dep:    iDep   >= 0 ? (v[iDep]   || '').trim() : '',
     });
   }
   return rows;
@@ -96,39 +106,35 @@ async function fetchStore(storeKey) {
   return rows;
 }
 
-function buildIndexes(storeKey) {
-  const brands = new Set();
-  const tax = {};
-  for (const row of cache[storeKey]) {
-    if (row.brand) brands.add(row.brand);
-    const d = row.div  || '(No Division)';
-    const s = row.sec  || '(No Section)';
-    const p = row.dep  || '(No Department)';
-    if (!tax[d]) tax[d] = {};
-    if (!tax[d][s]) tax[d][s] = {};
-    if (!tax[d][s][p]) tax[d][s][p] = new Set();
-    if (row.brand) tax[d][s][p].add(row.brand);
-  }
-  brandIndex[storeKey] = [...brands].sort((a, b) => a.localeCompare(b));
-  for (const d of Object.keys(tax))
-    for (const s of Object.keys(tax[d]))
-      for (const p of Object.keys(tax[d][s]))
-        tax[d][s][p] = [...tax[d][s][p]].sort();
-  taxIndex[storeKey] = tax;
-}
-
 async function refreshCache() {
   cache.status = 'loading';
   const t0 = Date.now();
   try {
     const [hyd, del, pun] = await Promise.all([
-      fetchStore('hyderabad'), fetchStore('delhi'), fetchStore('pune'),
+      fetchStore('hyderabad'),
+      fetchStore('delhi'),
+      fetchStore('pune'),
     ]);
-    cache.hyderabad = hyd; cache.delhi = del; cache.pune = pun;
-    for (const k of ['hyderabad','delhi','pune']) buildIndexes(k);
-    cache.lastFetched = new Date(); cache.status = 'ready';
+    cache.hyderabad = hyd;
+    cache.delhi     = del;
+    cache.pune      = pun;
+
+    // Build sorted brand lists per store
+    for (const key of ['hyderabad', 'delhi', 'pune']) {
+      const brands = new Set();
+      for (const row of cache[key]) { if (row.brand) brands.add(row.brand); }
+      brandIndex[key] = [...brands].sort((a, b) => a.localeCompare(b));
+    }
+
+    // Build taxonomy index for Browse tab
+    for (const k of ['hyderabad', 'delhi', 'pune']) buildTaxIndex(k);
+    cache.lastFetched = new Date();
+    cache.status      = 'ready';
     console.log(`[cache] All done in ${Date.now()-t0}ms | heap:${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB`);
-  } catch (err) { cache.status = 'error'; console.error('[cache] Refresh failed:', err.message); }
+  } catch (err) {
+    cache.status = 'error';
+    console.error('[cache] Refresh failed:', err.message);
+  }
 }
 
 function scheduleDailyRefresh() {
@@ -136,19 +142,23 @@ function scheduleDailyRefresh() {
   next.setUTCHours(4, 30, 0, 0);
   if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
   const ms = next - now;
-  console.log(`[cache] Next auto-refresh in ${Math.round(ms/60000)} min`);
-  setTimeout(() => { refreshCache(); setInterval(refreshCache, 24*60*60*1000); }, ms);
+  console.log(`[cache] Next auto-refresh in ${Math.round(ms / 60000)} min`);
+  setTimeout(() => { refreshCache(); setInterval(refreshCache, 24 * 60 * 60 * 1000); }, ms);
 }
 
-function norm(s) { return (s||'').toLowerCase().trim(); }
+// ── Search helpers ────────────────────────────────────────────────────────────
+function norm(s) { return (s || '').toLowerCase().trim(); }
 function tokenize(s) { return norm(s).split(/[\s\-_/]+/).filter(t => t.length > 0); }
 
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
-  if (Math.abs(m-n) > 3) return 99;
-  const dp = Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i===0?j:j===0?i:0));
-  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
-    dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  if (Math.abs(m - n) > 3) return 99;
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0)
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
   return dp[m][n];
 }
 
@@ -160,156 +170,284 @@ function tokenFuzzy(qt, tt) {
 
 function fuzzyScore(query, target) {
   const q = norm(query), t = norm(target);
-  if (!q||!t) return 0;
+  if (!q || !t) return 0;
   if (t.includes(q)) return 100;
-  const qT = tokenize(query), tT = tokenize(target);
-  if (!qT.length) return 0;
+  const qTokens = tokenize(query), tTokens = tokenize(target);
+  if (qTokens.length === 0) return 0;
   let matched = 0;
-  for (const qt of qT) for (const tt of tT) if (tokenFuzzy(qt,tt)){matched++;break;}
-  const r = matched/qT.length;
-  if (r===1) return 80; if (r>=0.7) return 50; return 0;
+  for (const qt of qTokens)
+    for (const tt of tTokens)
+      if (tokenFuzzy(qt, tt)) { matched++; break; }
+  const ratio = matched / qTokens.length;
+  if (ratio === 1)  return 80;
+  if (ratio >= 0.7) return 50;
+  return 0;
 }
 
 function toCard(row, storeName) {
   return {
-    barcode:row.bc, brand:row.brand, vendorArticleName:row.van,
-    itemName:row.iname, size:row.size, mrp:row.mrp, expiryDate:row.exp,
-    warehouseStock:row.wh, storeStock:row.floor, store:storeName,
-    styleId:row.style, division:row.div, section:row.sec, department:row.dep,
+    barcode: row.bc, brand: row.brand, vendorArticleName: row.van,
+    itemName: row.iname, size: row.size, mrp: row.mrp, expiryDate: row.exp,
+    warehouseStock: row.wh, storeStock: row.floor, store: storeName,
+    styleId: row.style,
+    division: row.div,
+    section: row.sec,
+    department: row.dep,
   };
 }
 
 function hasStock(card) {
-  return (parseInt(card.storeStock)||0)>0||(parseInt(card.warehouseStock)||0)>0;
+  return (parseInt(card.storeStock) || 0) > 0 || (parseInt(card.warehouseStock) || 0) > 0;
 }
 
-app.use(express.static(path.join(__dirname,'public')));
+function sortCards(cards) {
+  return cards.sort((a, b) => {
+    const aS = hasStock(a) ? 1 : 0, bS = hasStock(b) ? 1 : 0;
+    return bS - aS;
+  });
+}
 
-app.get('/api/status', (req,res) => res.json({
-  status:cache.status, lastFetched:cache.lastFetched,
-  counts:{hyderabad:cache.hyderabad.length,delhi:cache.delhi.length,pune:cache.pune.length},
-  heapMB:Math.round(process.memoryUsage().heapUsed/1024/1024),
-}));
 
-app.post('/api/refresh', (req,res) => { refreshCache(); res.json({ok:true}); });
 
-app.get('/api/brands', (req,res) => {
-  const {store} = req.query;
-  if (!store) return res.status(400).json({error:'Missing store.'});
-  if (cache.status!=='ready') return res.status(503).json({error:'Data not ready.'});
-  res.json({brands:brandIndex[store.toLowerCase()]||[]});
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/api/status', (req, res) => {
+  res.json({
+    status: cache.status, lastFetched: cache.lastFetched,
+    counts: { hyderabad: cache.hyderabad.length, delhi: cache.delhi.length, pune: cache.pune.length },
+    heapMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+  });
 });
 
-app.get('/api/taxonomy', (req,res) => {
-  const {store,div,sec} = req.query;
-  if (!store) return res.status(400).json({error:'Missing store.'});
-  if (cache.status!=='ready') return res.status(503).json({error:'Data not ready.'});
-  const idx = taxIndex[store.toLowerCase()]||{};
-  if (!div) return res.json({divisions:Object.keys(idx).sort()});
-  const divData = idx[div]||{};
-  if (!sec) return res.json({sections:Object.keys(divData).sort()});
-  return res.json({departments:Object.keys(divData[sec]||{}).sort()});
+app.post('/api/refresh', (req, res) => { refreshCache(); res.json({ ok: true }); });
+
+// Brands list for a store
+app.get('/api/brands', (req, res) => {
+  const { store } = req.query;
+  if (!store) return res.status(400).json({ error: 'Missing store.' });
+  if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
+  res.json({ brands: brandIndex[store.toLowerCase()] || [] });
 });
 
-app.get('/api/browse', (req,res) => {
+app.get('/api/search', (req, res) => {
   try {
-    const {store,div,sec,dep} = req.query;
-    if (!store) return res.status(400).json({error:'Missing store.'});
-    if (cache.status!=='ready') return res.status(503).json({error:'Data not ready.'});
+    const { q, brand, store } = req.query;
+    if (!q || !store) return res.status(400).json({ error: 'Missing q or store.' });
+    if (cache.status === 'loading') return res.status(503).json({ error: 'Still loading — please wait.' });
+    if (cache.status === 'error')   return res.status(503).json({ error: 'Data failed to load. Click Refresh.' });
+    if (cache.status !== 'ready')   return res.status(503).json({ error: 'Not ready yet.' });
+
+    const pk   = store.toLowerCase();
+    const rows = cache[pk] || [];
+    const storeName = STORES[pk]?.label || pk;
+
+    // Pre-filter by brand if provided
+    const pool = brand ? rows.filter(r => norm(r.brand) === norm(brand)) : rows;
+    const qn   = norm(q);
+    const scored = [];
+
+    for (const row of pool) {
+      // Barcode: substring match
+      let score = norm(row.bc).includes(qn) ? 100 : 0;
+      // Product name: fuzzy
+      if (score === 0) score = Math.max(fuzzyScore(q, row.iname), fuzzyScore(q, row.van));
+      if (score > 0) scored.push({ score, card: toCard(row, storeName) });
+    }
+
+    scored.sort((a, b) => {
+      const aS = hasStock(a.card) ? 1 : 0, bS = hasStock(b.card) ? 1 : 0;
+      if (bS !== aS) return bS - aS;
+      return b.score - a.score;
+    });
+
+    const primary = scored.map(s => s.card);
+    res.json({ primary, total: primary.length, lastFetched: cache.lastFetched });
+  } catch (err) {
+    console.error('[search]', err);
+    res.status(500).json({ error: 'Internal error: ' + err.message });
+  }
+});
+
+// Style group search — all items with same Style Group ID
+app.get('/api/style', (req, res) => {
+  try {
+    const { styleId, store } = req.query;
+    if (!styleId || !store) return res.status(400).json({ error: 'Missing styleId or store.' });
+    if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
     const pk = store.toLowerCase();
+    const storeName = STORES[pk]?.label || pk;
+    const sn = norm(styleId);
+    const results = cache[pk]
+      .filter(r => norm(r.style) === sn)
+      .map(r => toCard(r, storeName));
+    sortCards(results);
+    res.json({ items: results, total: results.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal error: ' + err.message });
+  }
+});
+
+// ── Taxonomy index (built after cache load) ───────────────────────────────────
+// Structure: { store: { division: { section: { department: Set<brand> } } } }
+const taxIndex = { hyderabad: {}, delhi: {}, pune: {} };
+
+function buildTaxIndex(storeKey) {
+  const idx = {};
+  for (const row of cache[storeKey]) {
+    const d = row.div  || '(No Division)';
+    const s = row.sec  || '(No Section)';
+    const p = row.dep  || '(No Department)';
+    const b = row.brand;
+    if (!b) continue;
+    if (!idx[d]) idx[d] = {};
+    if (!idx[d][s]) idx[d][s] = {};
+    if (!idx[d][s][p]) idx[d][s][p] = new Set();
+    idx[d][s][p].add(b);
+  }
+  // Convert sets to sorted arrays
+  for (const d of Object.keys(idx))
+    for (const s of Object.keys(idx[d]))
+      for (const p of Object.keys(idx[d][s]))
+        idx[d][s][p] = [...idx[d][s][p]].sort();
+  taxIndex[storeKey] = idx;
+}
+
+// GET /api/taxonomy?store=hyderabad
+// Returns { divisions, sections (if div given), departments (if div+sec given) }
+app.get('/api/taxonomy', (req, res) => {
+  const { store, div, sec } = req.query;
+  if (!store) return res.status(400).json({ error: 'Missing store.' });
+  if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
+  const idx = taxIndex[store.toLowerCase()] || {};
+  if (!div) {
+    return res.json({ divisions: Object.keys(idx).sort() });
+  }
+  const divData = idx[div] || {};
+  if (!sec) {
+    return res.json({ sections: Object.keys(divData).sort() });
+  }
+  const secData = divData[sec] || {};
+  return res.json({ departments: Object.keys(secData).sort() });
+});
+
+// GET /api/browse?store=hyderabad&div=X&sec=Y&dep=Z
+// Returns brands with in-stock barcode count
+app.get('/api/sizes-list', (req, res) => {
+  const { store, brand, div, sec, dep } = req.query;
+  if (!store) return res.status(400).json({ error: 'Missing store.' });
+  if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
+  const pk = store.toLowerCase();
+  // If filters provided, compute sizes from filtered pool; otherwise return all
+  if (brand || div || sec || dep) {
     const pool = cache[pk].filter(r => {
-      if (div && norm(r.div)!==norm(div)) return false;
-      if (sec && norm(r.sec)!==norm(sec)) return false;
-      if (dep && norm(r.dep)!==norm(dep)) return false;
+      if (brand && norm(r.brand) !== norm(brand)) return false;
+      if (div   && norm(r.div)   !== norm(div))   return false;
+      if (sec   && norm(r.sec)   !== norm(sec))   return false;
+      if (dep   && norm(r.dep)   !== norm(dep))   return false;
       return true;
     });
+    const sizes = [...new Set(pool.map(r => r.size).filter(Boolean))].sort();
+    return res.json({ sizes });
+  }
+  res.json({ sizes: sizeIndex[pk] || [] });
+});
+
+app.get('/api/browse', (req, res) => {
+  try {
+    const { store, div, sec, dep } = req.query;
+    if (!store) return res.status(400).json({ error: 'Missing store.' });
+    if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
+    const pk = store.toLowerCase();
+
+    // Filter rows by taxonomy
+    const pool = cache[pk].filter(r => {
+      if (div && norm(r.div) !== norm(div)) return false;
+      if (sec && norm(r.sec) !== norm(sec)) return false;
+      if (dep && norm(r.dep) !== norm(dep)) return false;
+      return true;
+    });
+
+    // Group by brand, count barcodes with stock
     const brandMap = {};
     for (const row of pool) {
-      const b = row.brand||'(No Brand)';
-      if (!brandMap[b]) brandMap[b]={brand:b,total:0,inStock:0};
+      const b = row.brand || '(No Brand)';
+      if (!brandMap[b]) brandMap[b] = { brand: b, total: 0, inStock: 0 };
       brandMap[b].total++;
-      if ((parseInt(row.floor)||0)>0||(parseInt(row.wh)||0)>0) brandMap[b].inStock++;
+      if ((parseInt(row.floor) || 0) > 0 || (parseInt(row.wh) || 0) > 0)
+        brandMap[b].inStock++;
     }
-    const brands = Object.values(brandMap).sort((a,b)=>b.inStock-a.inStock||a.brand.localeCompare(b.brand));
-    res.json({brands,total:brands.length});
-  } catch(err){res.status(500).json({error:'Internal error: '+err.message});}
+
+    // Sort: brands with stock first, then alphabetical
+    const brands = Object.values(brandMap)
+      .filter(b => b.total > 0)
+      .sort((a, b) => {
+        if (b.inStock !== a.inStock) return b.inStock - a.inStock;
+        return a.brand.localeCompare(b.brand);
+      });
+
+    res.json({ brands, total: brands.length });
+  } catch (err) {
+    console.error('[browse]', err);
+    res.status(500).json({ error: 'Internal error: ' + err.message });
+  }
 });
 
-app.get('/api/brand-products', (req,res) => {
+// GET /api/brand-products?store=hyderabad&brand=X&div=Y&sec=Z&dep=W
+// Returns all products for a brand (filtered by taxonomy), same card format
+app.get('/api/brand-products', (req, res) => {
   try {
-    const {store,brand,div,sec,dep} = req.query;
-    if (!store||!brand) return res.status(400).json({error:'Missing store or brand.'});
-    if (cache.status!=='ready') return res.status(503).json({error:'Data not ready.'});
+    const { store, brand, div, sec, dep } = req.query;
+    if (!store || !brand) return res.status(400).json({ error: 'Missing store or brand.' });
+    if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
     const pk = store.toLowerCase();
-    const storeName = STORES[pk]?.label||pk;
+    const storeName = STORES[pk]?.label || pk;
     const bn = norm(brand);
+
     const results = cache[pk]
-      .filter(r=>{
-        if (norm(r.brand)!==bn) return false;
-        if (div && norm(r.div)!==norm(div)) return false;
-        if (sec && norm(r.sec)!==norm(sec)) return false;
-        if (dep && norm(r.dep)!==norm(dep)) return false;
+      .filter(r => {
+        if (norm(r.brand) !== bn) return false;
+        if (div && norm(r.div) !== norm(div)) return false;
+        if (sec && norm(r.sec) !== norm(sec)) return false;
+        if (dep && norm(r.dep) !== norm(dep)) return false;
         return true;
       })
-      .map(r=>toCard(r,storeName));
-    results.sort((a,b)=>(hasStock(b)?1:0)-(hasStock(a)?1:0));
-    res.json({products:results,total:results.length});
-  } catch(err){res.status(500).json({error:'Internal error: '+err.message});}
-});
+      .map(r => toCard(r, storeName));
 
-app.get('/api/search', (req,res) => {
-  try {
-    const {q,brand,store} = req.query;
-    if (!q||!store) return res.status(400).json({error:'Missing q or store.'});
-    if (cache.status==='loading') return res.status(503).json({error:'Still loading — please wait.'});
-    if (cache.status==='error')   return res.status(503).json({error:'Data failed to load. Click Refresh.'});
-    if (cache.status!=='ready')   return res.status(503).json({error:'Not ready yet.'});
-    const pk = store.toLowerCase();
-    const pool = brand ? cache[pk].filter(r=>norm(r.brand)===norm(brand)) : cache[pk];
-    const qn = norm(q); const scored = [];
-    for (const row of pool) {
-      let score = norm(row.bc).includes(qn) ? 100 : 0;
-      if (score===0) score = Math.max(fuzzyScore(q,row.iname),fuzzyScore(q,row.van));
-      if (score>0) scored.push({score,card:toCard(row,STORES[pk]?.label||pk)});
-    }
-    scored.sort((a,b)=>{
-      const aS=hasStock(a.card)?1:0,bS=hasStock(b.card)?1:0;
-      if (bS!==aS) return bS-aS; return b.score-a.score;
+    // Sort: in-stock first
+    results.sort((a, b) => {
+      const aS = hasStock(a) ? 1 : 0, bS = hasStock(b) ? 1 : 0;
+      return bS - aS;
     });
-    res.json({primary:scored.map(s=>s.card),total:scored.length,lastFetched:cache.lastFetched});
-  } catch(err){res.status(500).json({error:'Internal error: '+err.message});}
+
+    res.json({ products: results, total: results.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal error: ' + err.message });
+  }
 });
 
-app.get('/api/style', (req,res) => {
-  try {
-    const {styleId,store} = req.query;
-    if (!styleId||!store) return res.status(400).json({error:'Missing styleId or store.'});
-    if (cache.status!=='ready') return res.status(503).json({error:'Data not ready.'});
-    const pk = store.toLowerCase();
-    const storeName = STORES[pk]?.label||pk;
-    const sn = norm(styleId);
-    const results = cache[pk].filter(r=>norm(r.style)===sn).map(r=>toCard(r,storeName));
-    results.sort((a,b)=>(hasStock(b)?1:0)-(hasStock(a)?1:0));
-    res.json({items:results,total:results.length});
-  } catch(err){res.status(500).json({error:'Internal error: '+err.message});}
+app.use((req, res) => res.status(404).json({ error: 'Not found' }));
+app.use((err, req, res, next) => {
+  res.status(500).json({ error: 'Server error: ' + (err.message || 'Unknown') });
 });
 
-app.use((req,res)=>res.status(404).json({error:'Not found'}));
-app.use((err,req,res,next)=>res.status(500).json({error:'Server error: '+(err.message||'Unknown')}));
-
+// ── Keep-alive (8 AM–10 PM IST, every 14 min) ────────────────────────────────
 function startKeepAlive() {
   const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
   if (!RENDER_URL) { console.log('[keep-alive] Skipping (local)'); return; }
-  const isActive = ()=>{ const m=new Date().getUTCHours()*60+new Date().getUTCMinutes(); return m>=150&&m<=990; };
-  setInterval(async()=>{
+  const isActive = () => {
+    const m = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
+    return m >= 150 && m <= 990;
+  };
+  setInterval(async () => {
     if (!isActive()) return;
-    try { const r=await fetch(`${RENDER_URL}/api/status`); console.log(`[keep-alive] Ping ${r.status}`); }
-    catch(e){ console.warn('[keep-alive] Failed:',e.message); }
-  }, 14*60*1000);
+    try { const r = await fetch(`${RENDER_URL}/api/status`); console.log(`[keep-alive] Ping ${r.status}`); }
+    catch (e) { console.warn('[keep-alive] Failed:', e.message); }
+  }, 14 * 60 * 1000);
   console.log('[keep-alive] Started');
 }
 
-app.listen(PORT, async()=>{
+app.listen(PORT, async () => {
   console.log(`Server on port ${PORT}`);
   await refreshCache();
   scheduleDailyRefresh();
