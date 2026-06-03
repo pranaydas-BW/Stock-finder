@@ -223,10 +223,6 @@
       <button class="brand-clear" id="brandClear" onclick="clearBrand()">✕</button>
       <div class="brand-dropdown" id="brandDropdown"></div>
     </div>
-    <label>Size <span style="font-weight:400;text-transform:none">(optional)</span></label>
-    <select id="sizeSelectSearch" onchange="onSizeSearchChange()" style="margin-bottom:12px">
-      <option value="">All Sizes</option>
-    </select>
     <label>Search</label>
     <div class="search-row">
       <input type="text" id="queryInput" placeholder="Barcode or product name…"
@@ -262,6 +258,18 @@
 ════════════════════════════════════════════════════ -->
 <div id="panel-browse" class="panel">
   <div class="controls">
+    <label>Division *</label>
+    <select id="divSelect" onchange="onDivChange()">
+      <option value="">Select Division…</option>
+    </select>
+    <label>Section *</label>
+    <select id="secSelect" onchange="onSecChange()" disabled>
+      <option value="">Select Section…</option>
+    </select>
+    <label>Department <span style="font-weight:400;text-transform:none">(optional)</span></label>
+    <select id="depSelect" disabled>
+      <option value="">All Departments</option>
+    </select>
     <label>Brand <span style="font-weight:400;text-transform:none">(optional)</span></label>
     <div class="brand-wrap">
       <input type="text" id="browseBrandInput" placeholder="Type to filter by brand…"
@@ -272,18 +280,6 @@
     <label>Size <span style="font-weight:400;text-transform:none">(optional)</span></label>
     <select id="sizeSelectBrowse" style="margin-bottom:12px">
       <option value="">All Sizes</option>
-    </select>
-    <label>Division</label>
-    <select id="divSelect" onchange="onDivChange()">
-      <option value="">All Divisions</option>
-    </select>
-    <label>Section</label>
-    <select id="secSelect" onchange="onSecChange()" disabled>
-      <option value="">All Sections</option>
-    </select>
-    <label>Department</label>
-    <select id="depSelect" disabled>
-      <option value="">All Departments</option>
     </select>
     <button class="browse-btn" id="browseBtn" onclick="doBrowse()" disabled>Loading data…</button>
   </div>

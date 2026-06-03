@@ -26,6 +26,7 @@ const cache = { hyderabad: [], delhi: [], pune: [], lastFetched: null, status: '
 
 // Per-store brand index: { storeName: Set<brand> }
 const brandIndex = { hyderabad: [], delhi: [], pune: [] };
+const sizeIndex  = { hyderabad: [], delhi: [], pune: [] };
 
 function parseCSVLean(text) {
   const lines = text.split('\n');
@@ -124,6 +125,9 @@ async function refreshCache() {
       const brands = new Set();
       for (const row of cache[key]) { if (row.brand) brands.add(row.brand); }
       brandIndex[key] = [...brands].sort((a, b) => a.localeCompare(b));
+      const sizes = new Set();
+      for (const row of cache[key]) { if (row.size) sizes.add(row.size); }
+      sizeIndex[key] = [...sizes].sort((a, b) => a.localeCompare(b));
     }
 
     // Build taxonomy index for Browse tab
@@ -355,16 +359,17 @@ app.get('/api/sizes-list', (req, res) => {
 
 app.get('/api/browse', (req, res) => {
   try {
-    const { store, div, sec, dep } = req.query;
+    const { store, div, sec, dep, size } = req.query;
     if (!store) return res.status(400).json({ error: 'Missing store.' });
     if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
     const pk = store.toLowerCase();
 
     // Filter rows by taxonomy
     const pool = cache[pk].filter(r => {
-      if (div && norm(r.div) !== norm(div)) return false;
-      if (sec && norm(r.sec) !== norm(sec)) return false;
-      if (dep && norm(r.dep) !== norm(dep)) return false;
+      if (div  && norm(r.div)  !== norm(div))  return false;
+      if (sec  && norm(r.sec)  !== norm(sec))  return false;
+      if (dep  && norm(r.dep)  !== norm(dep))  return false;
+      if (size && norm(r.size) !== norm(size)) return false;
       return true;
     });
 
@@ -397,7 +402,7 @@ app.get('/api/browse', (req, res) => {
 // Returns all products for a brand (filtered by taxonomy), same card format
 app.get('/api/brand-products', (req, res) => {
   try {
-    const { store, brand, div, sec, dep } = req.query;
+    const { store, brand, div, sec, dep, size } = req.query;
     if (!store || !brand) return res.status(400).json({ error: 'Missing store or brand.' });
     if (cache.status !== 'ready') return res.status(503).json({ error: 'Data not ready.' });
     const pk = store.toLowerCase();
@@ -409,7 +414,8 @@ app.get('/api/brand-products', (req, res) => {
         if (norm(r.brand) !== bn) return false;
         if (div && norm(r.div) !== norm(div)) return false;
         if (sec && norm(r.sec) !== norm(sec)) return false;
-        if (dep && norm(r.dep) !== norm(dep)) return false;
+        if (dep  && norm(r.dep)  !== norm(dep))  return false;
+        if (size && norm(r.size) !== norm(size)) return false;
         return true;
       })
       .map(r => toCard(r, storeName));
