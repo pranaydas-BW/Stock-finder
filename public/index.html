@@ -267,7 +267,7 @@
       <option value="">Select Section…</option>
     </select>
     <label>Department <span style="font-weight:400;text-transform:none">(optional)</span></label>
-    <select id="depSelect" disabled>
+    <select id="depSelect" onchange="onDepChange()" disabled>
       <option value="">All Departments</option>
     </select>
     <label>Brand <span style="font-weight:400;text-transform:none">(optional)</span></label>
@@ -486,8 +486,10 @@ function onBrandKey(e) {
   opts[highlightIdx]?.scrollIntoView({ block: 'nearest' });
 }
 document.addEventListener('click', e => {
-  if (!e.target.closest('.brand-wrap'))
+  if (!e.target.closest('#brandInput') && !e.target.closest('#brandDropdown'))
     document.getElementById('brandDropdown').classList.remove('open');
+  if (!e.target.closest('#browseBrandInput') && !e.target.closest('#browseBrandDropdown'))
+    document.getElementById('browseBrandDropdown').classList.remove('open');
 });
 
 // ── Browse taxonomy dropdowns ─────────────────────────────────────────────────
@@ -498,7 +500,7 @@ async function loadDivisions() {
     const r = await fetch(`/api/taxonomy?store=${store}`);
     const d = await r.json();
     const sel = document.getElementById('divSelect');
-    sel.innerHTML = '<option value="">All Divisions</option>'
+    sel.innerHTML = '<option value="">Select Division…</option>'
       + (d.divisions||[]).map(v => `<option value="${v}">${v}</option>`).join('');
   } catch {}
 }
@@ -521,6 +523,7 @@ async function onDivChange() {
     secSel.innerHTML = '<option value="">All Sections</option>'
       + (d.sections||[]).map(v => `<option value="${v}">${v}</option>`).join('');
   } catch {}
+  loadBrowseSizes();
 }
 
 async function onSecChange() {
@@ -538,15 +541,38 @@ async function onSecChange() {
     depSel.innerHTML = '<option value="">All Departments</option>'
       + (d.departments||[]).map(v => `<option value="${v}">${v}</option>`).join('');
   } catch {}
+  loadBrowseSizes();
 }
 
 function resetBrowseFilters() {
   browseDiv = ''; browseSec = ''; browseDep = '';
-  document.getElementById('divSelect').innerHTML = '<option value="">All Divisions</option>';
+  document.getElementById('divSelect').innerHTML = '<option value="">Select Division…</option>';
   document.getElementById('secSelect').innerHTML = '<option value="">All Sections</option>';
   document.getElementById('depSelect').innerHTML = '<option value="">All Departments</option>';
   document.getElementById('secSelect').disabled = true;
   document.getElementById('depSelect').disabled = true;
+  document.getElementById('sizeSelectBrowse').innerHTML = '<option value="">All Sizes</option>';
+}
+
+async function loadBrowseSizes() {
+  const store = document.getElementById('storeSelect').value;
+  const sel = document.getElementById('sizeSelectBrowse');
+  const current = sel.value;
+  const params = new URLSearchParams({ store });
+  if (browseDiv) params.set('div', browseDiv);
+  if (browseSec) params.set('sec', browseSec);
+  if (browseDep) params.set('dep', browseDep);
+  try {
+    const r = await fetch(`/api/sizes-list?${params}`);
+    const d = await r.json();
+    sel.innerHTML = '<option value="">All Sizes</option>'
+      + (d.sizes||[]).map(s => `<option value="${s}"${s===current?' selected':''}>${s}</option>`).join('');
+  } catch { sel.innerHTML = '<option value="">All Sizes</option>'; }
+}
+
+function onDepChange() {
+  browseDep = document.getElementById('depSelect').value;
+  loadBrowseSizes();
 }
 
 async function doBrowse() {
