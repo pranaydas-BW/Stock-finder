@@ -13,13 +13,11 @@
   .tab-bar { display: flex; background: #fff; border-bottom: 2px solid #f0f0f0; }
   .tab-bar-btn { flex: 1; padding: 13px; font-size: 14px; font-weight: 700; border: none; background: none; cursor: pointer; color: #999; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .15s; }
   .tab-bar-btn.active { color: #6366f1; border-bottom-color: #6366f1; }
-  .panel { display: none; }
-  .panel.active { display: block; }
+  .panel { display: none; } .panel.active { display: block; }
   .controls { background: #fff; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
   label { font-size: 12px; font-weight: 600; color: #888; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .4px; }
   select, input { width: 100%; padding: 11px 14px; border: 1.5px solid #ddd; border-radius: 10px; font-size: 15px; margin-bottom: 12px; appearance: none; background: #fafafa; color: #1a1a2e; }
   select:focus, input:focus { outline: none; border-color: #6366f1; background: #fff; }
-  select:disabled { color: #bbb; }
   .brand-wrap { position: relative; }
   .brand-wrap input { margin-bottom: 0; }
   .brand-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: #fff; border: 1.5px solid #ddd; border-top: none; border-radius: 0 0 10px 10px; max-height: 220px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,.1); display: none; }
@@ -34,13 +32,27 @@
   .scan-btn:active { background: #2d2d4e; }
   button.search-btn, button.browse-btn { width: 100%; padding: 13px; background: #6366f1; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s; }
   button.search-btn:disabled, button.browse-btn:disabled { background: #a5a7f5; cursor: not-allowed; }
-  .size-multiselect { width:100%; border:1.5px solid #ddd; border-radius:10px; background:#fafafa; margin-bottom:12px; overflow:hidden; }
-  .size-multiselect select { width:100%; border:none; background:transparent; padding:8px 14px; font-size:14px; outline:none; cursor:pointer; }
-  .size-selected-tags { display:flex; flex-wrap:wrap; gap:5px; padding:8px 10px; border-top:1px solid #f0f0f0; min-height:36px; }
-  .size-tag { background:#6366f1; color:#fff; font-size:12px; font-weight:600; padding:3px 8px; border-radius:20px; display:flex; align-items:center; gap:4px; }
-  .size-tag-remove { cursor:pointer; font-size:14px; line-height:1; opacity:.8; }
-  .size-tag-remove:hover { opacity:1; }
-  .size-none { font-size:12px; color:#bbb; padding:2px 4px; }
+  .ms-wrap { position: relative; margin-bottom: 12px; }
+  .ms-box { min-height: 46px; padding: 8px 36px 8px 10px; border: 1.5px solid #ddd; border-radius: 10px; background: #fafafa; cursor: pointer; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; position: relative; }
+  .ms-arrow { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #aaa; pointer-events: none; font-size: 12px; }
+  .ms-placeholder { font-size: 15px; color: #aaa; }
+  .ms-tag { background: #6366f1; color: #fff; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .ms-tag-x { cursor: pointer; font-size: 14px; line-height: 1; opacity: .8; }
+  .ms-tag-x:hover { opacity: 1; }
+  .ms-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: #fff; border: 1.5px solid #ddd; border-top: none; border-radius: 0 0 10px 10px; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+  .ms-dropdown.open { display: block; }
+  .ms-option { padding: 10px 14px; font-size: 14px; cursor: pointer; color: #333; display: flex; align-items: center; gap: 8px; }
+  .ms-option:hover { background: #eef2ff; color: #6366f1; }
+  .ms-option.selected { background: #f0f0ff; color: #6366f1; font-weight: 600; }
+  .ms-option::before { content: ''; display: inline-block; width: 14px; height: 14px; border: 1.5px solid #ddd; border-radius: 3px; flex-shrink: 0; }
+  .ms-option.selected::before { content: '✓'; background: #6366f1; border-color: #6366f1; color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+  .ms-empty { padding: 10px 14px; font-size: 13px; color: #aaa; }
+  .size-multiselect { width: 100%; border: 1.5px solid #ddd; border-radius: 10px; background: #fafafa; margin-bottom: 12px; overflow: hidden; }
+  .size-multiselect select { width: 100%; border: none; background: transparent; padding: 11px 14px; font-size: 15px; outline: none; cursor: pointer; appearance: none; }
+  .size-selected-tags { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 10px; border-top: 1px solid #f0f0f0; min-height: 36px; align-items: center; }
+  .size-tag { background: #6366f1; color: #fff; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; display: flex; align-items: center; gap: 4px; }
+  .size-tag-remove { cursor: pointer; font-size: 14px; line-height: 1; }
+  .size-none { font-size: 12px; color: #bbb; padding: 2px 4px; }
   .loading-banner { background: #fefce8; border: 1px solid #fde047; color: #854d0e; padding: 12px 20px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
   .loading-banner.hidden { display: none; }
   .mini-spin { width: 16px; height: 16px; border: 2px solid #fde047; border-top-color: #854d0e; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
@@ -102,12 +114,7 @@
 </style>
 </head>
 <body>
-
-<header>
-  <div class="store-dot" id="dotEl"></div>
-  <h1>Stock Finder</h1>
-</header>
-
+<header><div class="store-dot" id="dotEl"></div><h1>Stock Finder</h1></header>
 <div style="background:#fff;padding:12px 20px 0;box-shadow:0 1px 4px rgba(0,0,0,.06)">
   <label>Store</label>
   <select id="storeSelect" onchange="onStoreChange()" style="margin-bottom:12px">
@@ -116,7 +123,6 @@
     <option value="pune">Pune</option>
   </select>
 </div>
-
 <div class="tab-bar">
   <button class="tab-bar-btn active" onclick="switchTab('search',this)">🔍 Search</button>
   <button class="tab-bar-btn"        onclick="switchTab('browse',this)">📂 Browse</button>
@@ -127,20 +133,16 @@
   <div class="controls">
     <label>Brand <span style="font-weight:400;text-transform:none">(optional)</span></label>
     <div class="brand-wrap" style="margin-bottom:12px">
-      <input type="text" id="brandInput" placeholder="Type to filter by brand…"
-             autocomplete="off"
-             oninput="onBrandInput()"
-             onkeydown="onBrandKey(event)"
-             onfocus="openBrandDropdown()"
-             onclick="openBrandDropdown()"/>
+      <input type="text" id="brandInput" placeholder="Type to filter by brand…" autocomplete="off"
+             oninput="onBrandInput()" onkeydown="onBrandKey(event)" onfocus="openBrandDropdown()" onclick="openBrandDropdown()"/>
       <button class="brand-clear" id="brandClear" onclick="clearBrand()">✕</button>
       <div class="brand-dropdown" id="brandDropdown"></div>
     </div>
     <label>Search</label>
     <div class="search-row">
-      <input type="text" id="queryInput" placeholder="Barcode or product name…"
-             autocomplete="off" onkeydown="if(event.key==='Enter'&&cacheReady)doSearch()"/>
-      <button class="scan-btn" onclick="openScanner()" title="Scan barcode">
+      <input type="text" id="queryInput" placeholder="Barcode or product name…" autocomplete="off"
+             onkeydown="if(event.key==='Enter'&&cacheReady)doSearch()"/>
+      <button class="scan-btn" onclick="openScanner()">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
           <path d="M2 6V4a2 2 0 0 1 2-2h2"/><path d="M18 2h2a2 2 0 0 1 2 2v2"/>
           <path d="M22 18v2a2 2 0 0 1-2 2h-2"/><path d="M6 22H4a2 2 0 0 1-2-2v-2"/>
@@ -151,90 +153,76 @@
     </div>
     <button class="search-btn" id="searchBtn" onclick="doSearch()" disabled>Loading data…</button>
   </div>
-  <div class="loading-banner" id="loadingBanner">
-    <div class="mini-spin"></div>
-    <span id="loadingText">Loading inventory data…</span>
-  </div>
-  <div class="status-bar">
-    <span id="statusText">Connecting…</span>
-    <button class="refresh-btn" onclick="forceRefresh()">↺ Refresh</button>
-  </div>
-  <div id="searchResults" class="results">
-    <div class="empty">Select a store and search above</div>
-  </div>
+  <div class="loading-banner" id="loadingBanner"><div class="mini-spin"></div><span id="loadingText">Loading inventory data…</span></div>
+  <div class="status-bar"><span id="statusText">Connecting…</span><button class="refresh-btn" onclick="forceRefresh()">↺ Refresh</button></div>
+  <div id="searchResults" class="results"><div class="empty">Select a store and search above</div></div>
 </div>
 
 <!-- BROWSE TAB -->
 <div id="panel-browse" class="panel">
   <div class="controls">
-    <div style="font-size:12px;color:#888;margin-bottom:12px">All filters are optional — select at least one to browse.</div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">All filters optional — select at least one to browse.</div>
     <label>Division</label>
-    <select id="divSelect" onchange="onDivChange()">
-      <option value="">All Divisions</option>
-    </select>
+    <div class="ms-wrap" id="ms-div">
+      <div class="ms-box" onclick="toggleMsDropdown('div')">
+        <div class="ms-tags" id="ms-div-tags"><span class="ms-placeholder">All Divisions</span></div>
+        <span class="ms-arrow">▾</span>
+      </div>
+      <div class="ms-dropdown" id="ms-div-dd"></div>
+    </div>
     <label>Section</label>
-    <select id="secSelect" onchange="onSecChange()" disabled>
-      <option value="">All Sections</option>
-    </select>
+    <div class="ms-wrap" id="ms-sec">
+      <div class="ms-box" onclick="toggleMsDropdown('sec')">
+        <div class="ms-tags" id="ms-sec-tags"><span class="ms-placeholder">All Sections</span></div>
+        <span class="ms-arrow">▾</span>
+      </div>
+      <div class="ms-dropdown" id="ms-sec-dd"></div>
+    </div>
     <label>Department</label>
-    <select id="depSelect" onchange="onDepChange()" disabled>
-      <option value="">All Departments</option>
-    </select>
+    <div class="ms-wrap" id="ms-dep">
+      <div class="ms-box" onclick="toggleMsDropdown('dep')">
+        <div class="ms-tags" id="ms-dep-tags"><span class="ms-placeholder">All Departments</span></div>
+        <span class="ms-arrow">▾</span>
+      </div>
+      <div class="ms-dropdown" id="ms-dep-dd"></div>
+    </div>
     <label>Brand <span style="font-weight:400;text-transform:none">(optional)</span></label>
     <div class="brand-wrap" style="margin-bottom:12px">
-      <input type="text" id="browseBrandInput" placeholder="Type to filter by brand…"
-             autocomplete="off"
-             oninput="onBrowseBrandInput()"
-             onkeydown="onBrowseBrandKey(event)"
-             onfocus="ensureBrowseBrands()"
-             onclick="ensureBrowseBrands()"/>
+      <input type="text" id="browseBrandInput" placeholder="Type to filter by brand…" autocomplete="off"
+             oninput="onBrowseBrandInput()" onkeydown="onBrowseBrandKey(event)"
+             onfocus="ensureBrowseBrands()" onclick="ensureBrowseBrands()"/>
       <button class="brand-clear" id="browseBrandClear" onclick="clearBrowseBrand()">✕</button>
       <div class="brand-dropdown" id="browseBrandDropdown"></div>
     </div>
     <label>Size <span style="font-weight:400;text-transform:none">(multi-select)</span></label>
     <div class="size-multiselect">
       <select id="sizeDropdown" onchange="onSizeDropdownChange(this)">
-        <option value="">Select sizes…</option>
+        <option value="">— Add a size —</option>
       </select>
-      <div class="size-selected-tags" id="sizeSelectedTags">
-        <span class="size-none" id="sizeNoneLabel">No sizes selected</span>
-      </div>
+      <div class="size-selected-tags" id="sizeSelectedTags"><span class="size-none">No sizes selected</span></div>
     </div>
     <button class="browse-btn" id="browseBtn" onclick="doBrowse()" disabled>Loading data…</button>
   </div>
-  <div id="browseResults" class="results">
-    <div class="empty">Select at least one filter and tap Browse</div>
-  </div>
+  <div id="browseResults" class="results"><div class="empty">Select at least one filter and tap Browse</div></div>
 </div>
 
-<!-- BRAND PRODUCTS MODAL -->
+<!-- BRAND MODAL -->
 <div class="modal-overlay" id="brandModal" onclick="closeBrandModal(event)">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="brandModalTitle">Products</span>
-      <button class="modal-close" onclick="closeBrandModal()">✕</button>
-    </div>
+    <div class="modal-header"><span class="modal-title" id="brandModalTitle">Products</span><button class="modal-close" onclick="closeBrandModal()">✕</button></div>
     <div class="modal-body" id="brandModalBody"><div class="modal-loading">Loading…</div></div>
   </div>
 </div>
-
 <!-- STYLE MODAL -->
 <div class="modal-overlay" id="styleModal" onclick="closeStyleModal(event)">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="styleModalTitle">Style Group</span>
-      <button class="modal-close" onclick="closeStyleModal()">✕</button>
-    </div>
+    <div class="modal-header"><span class="modal-title" id="styleModalTitle">Style Group</span><button class="modal-close" onclick="closeStyleModal()">✕</button></div>
     <div class="modal-body" id="styleModalBody"><div class="modal-loading">Loading…</div></div>
   </div>
 </div>
-
 <!-- SCANNER -->
 <div class="scanner-overlay" id="scannerOverlay">
-  <div class="scanner-header">
-    <span class="scanner-title">📷 Scan Barcode</span>
-    <button class="scanner-close" onclick="closeScanner()">✕</button>
-  </div>
+  <div class="scanner-header"><span class="scanner-title">📷 Scan Barcode</span><button class="scanner-close" onclick="closeScanner()">✕</button></div>
   <div style="position:relative;flex:1;overflow:hidden">
     <video id="scannerVideo" playsinline muted></video>
     <div class="scanner-reticle"><span class="reticle-tr"></span><span class="reticle-bl"></span><div class="scan-line"></div></div>
@@ -245,69 +233,66 @@
 
 <script src="/zxing.min.js"></script>
 <script>
-// ── State ─────────────────────────────────────────────────────────────────────
 let cacheReady=false, allBrands=[], selectedBrand='', highlightIdx=-1, statusPollTimer=null;
 let scannerReader=null, scannerActive=false;
-let browseDiv='', browseSec='', browseDep='', browseBrand='';
-let selectedSizes=new Set();
+let browseBrand='', selectedSizes=new Set();
+const msState={div:new Set(),sec:new Set(),dep:new Set()};
+const msOptions={div:[],sec:[],dep:[]};
 let browseBrandList=[], browseBrandHighlight=-1;
 
-// ── Tab switching ─────────────────────────────────────────────────────────────
-function switchTab(tab, btn) {
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-bar-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('panel-'+tab).classList.add('active');
-  btn.classList.add('active');
-  if (tab==='browse' && cacheReady) { loadDivisions(); ensureBrowseBrands(); }
+  document.getElementById('panel-'+tab).classList.add('active'); btn.classList.add('active');
+  if(tab==='browse'&&cacheReady){loadDivisions();ensureBrowseBrands();}
 }
 
-// ── Store change ──────────────────────────────────────────────────────────────
-function onStoreChange() {
-  clearBrand(); clearBrowseBrand(); browseBrandList=[];
-  if (cacheReady) { loadBrands(); loadDivisions(); }
+function onStoreChange(){
+  clearBrand();clearBrowseBrand();browseBrandList=[];
+  if(cacheReady){loadBrands();loadDivisions();}
   document.getElementById('searchResults').innerHTML='<div class="empty">Select a store and search above</div>';
   document.getElementById('browseResults').innerHTML='<div class="empty">Select at least one filter and tap Browse</div>';
   resetBrowseFilters();
 }
 
-// ── Status / cache ────────────────────────────────────────────────────────────
-function setReady(counts, lastFetched) {
+// ── Status ────────────────────────────────────────────────────────────────────
+function setReady(counts,lastFetched){
   cacheReady=true;
-  document.getElementById('searchBtn').disabled=false;
-  document.getElementById('searchBtn').textContent='Search';
+  document.getElementById('searchBtn').disabled=false;document.getElementById('searchBtn').textContent='Search';
   document.getElementById('loadingBanner').classList.add('hidden');
   document.getElementById('dotEl').style.background='#4ade80';
   const total=(counts.hyderabad||0)+(counts.delhi||0)+(counts.pune||0);
   const t=new Date(lastFetched);
   const fmt=t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+' '+t.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
   document.getElementById('statusText').textContent=`${total.toLocaleString()} items · ${fmt}`;
-  loadBrands(); loadDivisions(); updateBrowseBtn();
+  loadBrands();loadDivisions();updateBrowseBtn();
 }
-function setLoading(msg) {
+function setLoading(msg){
   cacheReady=false;
-  document.getElementById('searchBtn').disabled=true; document.getElementById('searchBtn').textContent='Loading data…';
+  document.getElementById('searchBtn').disabled=true;document.getElementById('searchBtn').textContent='Loading data…';
   document.getElementById('loadingBanner').classList.remove('hidden');
   document.getElementById('loadingText').textContent=msg||'Loading…';
   document.getElementById('dotEl').style.background='#facc15';
   document.getElementById('statusText').textContent='Loading…';
   updateBrowseBtn();
 }
-function setError(msg) {
+function setError(msg){
   cacheReady=false;
-  document.getElementById('searchBtn').disabled=true; document.getElementById('searchBtn').textContent='Data unavailable';
+  document.getElementById('searchBtn').disabled=true;document.getElementById('searchBtn').textContent='Data unavailable';
   document.getElementById('loadingBanner').classList.add('hidden');
   document.getElementById('dotEl').style.background='#f87171';
   document.getElementById('statusText').textContent=msg||'Load error — click ↺ Refresh';
   updateBrowseBtn();
 }
-async function checkStatus() {
-  try {
-    const r=await fetch('/api/status'); if(!r.ok){setError('Server error');return;}
+async function checkStatus(){
+  try{
+    const r=await fetch('/api/status');if(!r.ok){setError('Server error');return;}
     const d=await r.json();
     if(d.status==='ready'){setReady(d.counts,d.lastFetched);if(statusPollTimer){clearInterval(statusPollTimer);statusPollTimer=null;}}
     else if(d.status==='loading'){setLoading('Loading inventory from Google Sheets…');if(!statusPollTimer)statusPollTimer=setInterval(checkStatus,2500);}
     else{setError('Failed to load — click ↺ Refresh');if(statusPollTimer){clearInterval(statusPollTimer);statusPollTimer=null;}}
-  } catch{setError('Cannot reach server');setTimeout(checkStatus,5000);}
+  }catch{setError('Cannot reach server');setTimeout(checkStatus,5000);}
 }
 async function forceRefresh(){
   setLoading('Refreshing…');
@@ -315,11 +300,10 @@ async function forceRefresh(){
   catch{setError('Refresh failed');}
 }
 
-// ── Search brand autocomplete ─────────────────────────────────────────────────
-async function loadBrands() {
+// ── Search brand ──────────────────────────────────────────────────────────────
+async function loadBrands(){
   const store=document.getElementById('storeSelect').value;
-  try{const r=await fetch(`/api/brands?store=${store}`);const d=await r.json();allBrands=d.brands||[];}
-  catch{allBrands=[];}
+  try{const r=await fetch(`/api/brands?store=${store}`);const d=await r.json();allBrands=d.brands||[];}catch{allBrands=[];}
 }
 function onBrandInput(){selectedBrand='';document.getElementById('brandClear').classList.remove('visible');renderBrandDropdown();}
 function openBrandDropdown(){if(!allBrands.length)loadBrands().then(renderBrandDropdown);else renderBrandDropdown();}
@@ -340,22 +324,80 @@ function onBrandKey(e){
   if(e.key==='ArrowDown'){e.preventDefault();highlightIdx=Math.min(highlightIdx+1,opts.length-1);}
   else if(e.key==='ArrowUp'){e.preventDefault();highlightIdx=Math.max(highlightIdx-1,0);}
   else if(e.key==='Enter'&&highlightIdx>=0){e.preventDefault();selectBrand(opts[highlightIdx].dataset.brand);return;}
-  else if(e.key==='Escape'){dd.classList.remove('open');return;}
-  else return;
+  else if(e.key==='Escape'){dd.classList.remove('open');return;}else return;
   opts.forEach((o,i)=>o.classList.toggle('highlighted',i===highlightIdx));
   opts[highlightIdx]?.scrollIntoView({block:'nearest'});
+}
+
+// ── Multi-select filters ──────────────────────────────────────────────────────
+function toggleMsDropdown(key){
+  const dd=document.getElementById('ms-'+key+'-dd');
+  const isOpen=dd.classList.contains('open');
+  ['div','sec','dep'].forEach(k=>document.getElementById('ms-'+k+'-dd').classList.remove('open'));
+  document.getElementById('browseBrandDropdown').classList.remove('open');
+  if(!isOpen)dd.classList.add('open');
+}
+function renderMsDropdown(key){
+  const dd=document.getElementById('ms-'+key+'-dd');
+  const sel=msState[key],opts=msOptions[key];
+  if(!opts.length){dd.innerHTML='<div class="ms-empty">No options available</div>';return;}
+  dd.innerHTML=opts.map(v=>`<div class="ms-option${sel.has(v)?' selected':''}" onmousedown="toggleMsOption('${key}','${v.replace(/'/g,"\\'")}')"> ${v}</div>`).join('');
+}
+function renderMsTags(key){
+  const container=document.getElementById('ms-'+key+'-tags'),sel=msState[key];
+  const labels={div:'All Divisions',sec:'All Sections',dep:'All Departments'};
+  if(!sel.size){container.innerHTML=`<span class="ms-placeholder">${labels[key]}</span>`;return;}
+  container.innerHTML=[...sel].map(v=>`<span class="ms-tag">${v}<span class="ms-tag-x" onmousedown="removeMsOption('${key}','${v.replace(/'/g,"\\'")}')">×</span></span>`).join('');
+}
+async function toggleMsOption(key,val){
+  if(msState[key].has(val))msState[key].delete(val);else msState[key].add(val);
+  renderMsTags(key);renderMsDropdown(key);
+  if(key==='div'){msState.sec.clear();msState.dep.clear();msOptions.sec=[];msOptions.dep=[];renderMsTags('sec');renderMsTags('dep');renderMsDropdown('sec');renderMsDropdown('dep');await loadMsOptions('sec');}
+  else if(key==='sec'){msState.dep.clear();msOptions.dep=[];renderMsTags('dep');renderMsDropdown('dep');await loadMsOptions('dep');}
+  selectedSizes=new Set();await loadBrowseSizes();updateBrowseBtn();
+}
+function removeMsOption(key,val){
+  msState[key].delete(val);renderMsTags(key);renderMsDropdown(key);
+  if(key==='div'){msState.sec.clear();msState.dep.clear();msOptions.sec=[];msOptions.dep=[];renderMsTags('sec');renderMsTags('dep');}
+  if(key==='sec'){msState.dep.clear();msOptions.dep=[];renderMsTags('dep');}
+  selectedSizes=new Set();loadBrowseSizes();updateBrowseBtn();
+}
+async function loadMsOptions(key){
+  const store=document.getElementById('storeSelect').value;
+  try{
+    if(key==='div'){
+      const r=await fetch(`/api/taxonomy?store=${store}`);const d=await r.json();
+      msOptions.div=d.divisions||[];renderMsDropdown('div');
+    } else if(key==='sec'){
+      const divs=[...msState.div];if(!divs.length){msOptions.sec=[];renderMsDropdown('sec');return;}
+      const allSecs=new Set();
+      await Promise.all(divs.map(async div=>{const r=await fetch(`/api/taxonomy?store=${store}&div=${encodeURIComponent(div)}`);const d=await r.json();(d.sections||[]).forEach(s=>allSecs.add(s));}));
+      msOptions.sec=[...allSecs].sort();renderMsDropdown('sec');
+    } else if(key==='dep'){
+      const divs=[...msState.div],secs=[...msState.sec];if(!secs.length){msOptions.dep=[];renderMsDropdown('dep');return;}
+      const allDeps=new Set();
+      const pairs=divs.length?divs.flatMap(d=>secs.map(s=>({d,s}))):secs.map(s=>({d:'',s}));
+      await Promise.all(pairs.map(async({d,s})=>{
+        const url=d?`/api/taxonomy?store=${store}&div=${encodeURIComponent(d)}&sec=${encodeURIComponent(s)}`:`/api/taxonomy?store=${store}&sec=${encodeURIComponent(s)}`;
+        const r=await fetch(url);const data=await r.json();(data.departments||[]).forEach(p=>allDeps.add(p));
+      }));
+      msOptions.dep=[...allDeps].sort();renderMsDropdown('dep');
+    }
+  }catch(e){console.error('loadMsOptions',key,e);}
+}
+async function loadDivisions(){
+  msState.div.clear();msState.sec.clear();msState.dep.clear();
+  msOptions.sec=[];msOptions.dep=[];
+  renderMsTags('div');renderMsTags('sec');renderMsTags('dep');
+  await loadMsOptions('div');
 }
 
 // ── Browse brand autocomplete ─────────────────────────────────────────────────
 async function loadBrowseBrandList(){
   const store=document.getElementById('storeSelect').value;
-  try{const r=await fetch(`/api/brands?store=${store}`);const d=await r.json();browseBrandList=d.brands||[];}
-  catch{browseBrandList=[];}
+  try{const r=await fetch(`/api/brands?store=${store}`);const d=await r.json();browseBrandList=d.brands||[];}catch{browseBrandList=[];}
 }
-function ensureBrowseBrands(){
-  if(!browseBrandList.length) loadBrowseBrandList().then(()=>renderBrowseBrandDropdown());
-  else renderBrowseBrandDropdown();
-}
+function ensureBrowseBrands(){if(!browseBrandList.length)loadBrowseBrandList().then(()=>renderBrowseBrandDropdown());else renderBrowseBrandDropdown();}
 function onBrowseBrandInput(){browseBrand='';document.getElementById('browseBrandClear').classList.remove('visible');renderBrowseBrandDropdown();}
 function renderBrowseBrandDropdown(){
   const q=document.getElementById('browseBrandInput').value.toLowerCase();
@@ -371,7 +413,7 @@ function selectBrowseBrand(brand){
   browseBrand=brand;document.getElementById('browseBrandInput').value=brand;
   document.getElementById('browseBrandDropdown').classList.remove('open');
   document.getElementById('browseBrandClear').classList.add('visible');
-  loadBrowseSizes(); updateBrowseBtn();
+  loadBrowseSizes();updateBrowseBtn();
 }
 function clearBrowseBrand(){
   browseBrand='';document.getElementById('browseBrandInput').value='';
@@ -385,127 +427,96 @@ function onBrowseBrandKey(e){
   if(e.key==='ArrowDown'){e.preventDefault();browseBrandHighlight=Math.min(browseBrandHighlight+1,opts.length-1);}
   else if(e.key==='ArrowUp'){e.preventDefault();browseBrandHighlight=Math.max(browseBrandHighlight-1,0);}
   else if(e.key==='Enter'&&browseBrandHighlight>=0){e.preventDefault();selectBrowseBrand(opts[browseBrandHighlight].dataset.brand);return;}
-  else if(e.key==='Escape'){dd.classList.remove('open');return;}
-  else return;
+  else if(e.key==='Escape'){dd.classList.remove('open');return;}else return;
   opts.forEach((o,i)=>o.classList.toggle('highlighted',i===browseBrandHighlight));
   opts[browseBrandHighlight]?.scrollIntoView({block:'nearest'});
 }
 
 // Close dropdowns on outside click
 document.addEventListener('click',e=>{
-  if(!e.target.closest('#brandInput')&&!e.target.closest('#brandDropdown'))
-    document.getElementById('brandDropdown').classList.remove('open');
-  if(!e.target.closest('#browseBrandInput')&&!e.target.closest('#browseBrandDropdown'))
-    document.getElementById('browseBrandDropdown').classList.remove('open');
+  if(!e.target.closest('#ms-div'))document.getElementById('ms-div-dd').classList.remove('open');
+  if(!e.target.closest('#ms-sec'))document.getElementById('ms-sec-dd').classList.remove('open');
+  if(!e.target.closest('#ms-dep'))document.getElementById('ms-dep-dd').classList.remove('open');
+  if(!e.target.closest('#brandInput')&&!e.target.closest('#brandDropdown'))document.getElementById('brandDropdown').classList.remove('open');
+  if(!e.target.closest('#browseBrandInput')&&!e.target.closest('#browseBrandDropdown'))document.getElementById('browseBrandDropdown').classList.remove('open');
 });
 
-// ── Browse taxonomy ───────────────────────────────────────────────────────────
-async function loadDivisions(){
-  const store=document.getElementById('storeSelect').value;
-  try{
-    const r=await fetch(`/api/taxonomy?store=${store}`);const d=await r.json();
-    const sel=document.getElementById('divSelect');
-    sel.innerHTML='<option value="">All Divisions</option>'+(d.divisions||[]).map(v=>`<option value="${v}">${v}</option>`).join('');
-  }catch{}
-}
-async function onDivChange(){
-  browseDiv=document.getElementById('divSelect').value; browseSec=''; browseDep='';
-  const secSel=document.getElementById('secSelect'),depSel=document.getElementById('depSelect');
-  secSel.innerHTML='<option value="">All Sections</option>';
-  depSel.innerHTML='<option value="">All Departments</option>'; depSel.disabled=true;
-  secSel.disabled=!browseDiv;
-  if(browseDiv){
-    const store=document.getElementById('storeSelect').value;
-    try{const r=await fetch(`/api/taxonomy?store=${store}&div=${encodeURIComponent(browseDiv)}`);const d=await r.json();
-      secSel.innerHTML='<option value="">All Sections</option>'+(d.sections||[]).map(v=>`<option value="${v}">${v}</option>`).join('');
-    }catch{}
-  }
-  selectedSizes=new Set(); await loadBrowseSizes(); updateBrowseBtn();
-}
-async function onSecChange(){
-  browseSec=document.getElementById('secSelect').value; browseDep='';
-  const depSel=document.getElementById('depSelect');
-  depSel.innerHTML='<option value="">All Departments</option>'; depSel.disabled=!browseSec;
-  if(browseSec){
-    const store=document.getElementById('storeSelect').value;
-    try{const r=await fetch(`/api/taxonomy?store=${store}&div=${encodeURIComponent(browseDiv)}&sec=${encodeURIComponent(browseSec)}`);const d=await r.json();
-      depSel.innerHTML='<option value="">All Departments</option>'+(d.departments||[]).map(v=>`<option value="${v}">${v}</option>`).join('');
-    }catch{}
-  }
-  selectedSizes=new Set(); await loadBrowseSizes(); updateBrowseBtn();
-}
-async function onDepChange(){
-  browseDep=document.getElementById('depSelect').value;
-  selectedSizes=new Set(); await loadBrowseSizes(); updateBrowseBtn();
-}
-
-// ── Size chips ────────────────────────────────────────────────────────────────
+// ── Size multi-select ─────────────────────────────────────────────────────────
 async function loadBrowseSizes(){
   const store=document.getElementById('storeSelect').value;
   const params=new URLSearchParams({store});
-  if(browseDiv)params.set('div',browseDiv);
-  if(browseSec)params.set('sec',browseSec);
-  if(browseDep)params.set('dep',browseDep);
+  const divs=[...msState.div],secs=[...msState.sec],deps=[...msState.dep];
+  if(divs.length===1)params.set('div',divs[0]);
+  if(secs.length===1)params.set('sec',secs[0]);
+  if(deps.length===1)params.set('dep',deps[0]);
   if(browseBrand)params.set('brand',browseBrand);
-  try{
-    const r=await fetch(`/api/sizes-list?${params}`);const d=await r.json();
-    renderSizeChips(d.sizes||[]);
-  }catch{renderSizeChips([]);}
+  try{const r=await fetch(`/api/sizes-list?${params}`);const d=await r.json();renderSizeDropdown(d.sizes||[]);}
+  catch{renderSizeDropdown([]);}
 }
-function renderSizeChips(sizes){
-  const container=document.getElementById('sizeChips');
+function renderSizeDropdown(sizes){
+  const sel=document.getElementById('sizeDropdown');
   const validSizes=new Set(sizes);
   for(const s of selectedSizes){if(!validSizes.has(s))selectedSizes.delete(s);}
-  if(!sizes.length){container.innerHTML='<span class="size-chips-empty">No sizes available for current filters</span>';return;}
-  container.innerHTML=sizes.map(s=>`<button class="size-chip${selectedSizes.has(s)?' selected':''}" onclick="toggleSize('${s.replace(/'/g,"\\'")}',this)">${s}</button>`).join('');
+  sel.innerHTML='<option value="">— Add a size —</option>'+sizes.map(s=>`<option value="${s}">${s}</option>`).join('');
+  refreshSizeTags();
 }
-function toggleSize(size,el){
-  if(selectedSizes.has(size)){selectedSizes.delete(size);el.classList.remove('selected');}
-  else{selectedSizes.add(size);el.classList.add('selected');}
-  updateBrowseBtn();
+function onSizeDropdownChange(sel){
+  const val=sel.value;if(!val)return;
+  selectedSizes.add(val);sel.value='';refreshSizeTags();updateBrowseBtn();
+}
+function removeSizeTag(size){selectedSizes.delete(size);refreshSizeTags();updateBrowseBtn();}
+function refreshSizeTags(){
+  const container=document.getElementById('sizeSelectedTags');
+  if(!selectedSizes.size){container.innerHTML='<span class="size-none">No sizes selected</span>';return;}
+  container.innerHTML=[...selectedSizes].map(s=>`<span class="size-tag">${s}<span class="size-tag-remove" onclick="removeSizeTag('${s.replace(/'/g,"\\'")}')">×</span></span>`).join('');
 }
 
-// ── Browse button state ───────────────────────────────────────────────────────
+// ── Browse button ─────────────────────────────────────────────────────────────
 function updateBrowseBtn(){
   const btn=document.getElementById('browseBtn');
-  const hasAny=browseDiv||browseSec||browseDep||browseBrand||selectedSizes.size>0;
+  const hasAny=msState.div.size||msState.sec.size||msState.dep.size||browseBrand||selectedSizes.size;
   btn.disabled=!cacheReady||!hasAny;
   if(!cacheReady)btn.textContent='Loading data…';
   else if(!hasAny)btn.textContent='Select at least one filter';
   else btn.textContent='Browse Brands';
 }
-
 function resetBrowseFilters(){
-  browseDiv='';browseSec='';browseDep='';browseBrand='';selectedSizes=new Set();
-  clearBrowseBrand();
-  document.getElementById('divSelect').innerHTML='<option value="">All Divisions</option>';
-  document.getElementById('secSelect').innerHTML='<option value="">All Sections</option>';
-  document.getElementById('depSelect').innerHTML='<option value="">All Departments</option>';
-  document.getElementById('secSelect').disabled=true; document.getElementById('depSelect').disabled=true;
-  document.getElementById('sizeDropdown').innerHTML='<option value="">Select sizes…</option>';
-  document.getElementById('sizeSelectedTags').innerHTML='<span class="size-none" id="sizeNoneLabel">No sizes selected</span>';
+  msState.div.clear();msState.sec.clear();msState.dep.clear();
+  msOptions.div=[];msOptions.sec=[];msOptions.dep=[];
+  ['div','sec','dep'].forEach(k=>{renderMsTags(k);renderMsDropdown(k);});
+  clearBrowseBrand();browseBrandList=[];selectedSizes=new Set();
+  document.getElementById('sizeDropdown').innerHTML='<option value="">— Add a size —</option>';
+  document.getElementById('sizeSelectedTags').innerHTML='<span class="size-none">No sizes selected</span>';
   updateBrowseBtn();
 }
 
-// ── Browse ────────────────────────────────────────────────────────────────────
+// ── Browse API ────────────────────────────────────────────────────────────────
 async function doBrowse(){
   if(!cacheReady)return;
-  const hasAny=browseDiv||browseSec||browseDep||browseBrand||selectedSizes.size>0;
+  const hasAny=msState.div.size||msState.sec.size||msState.dep.size||browseBrand||selectedSizes.size;
   if(!hasAny)return;
   const store=document.getElementById('storeSelect').value;
   const out=document.getElementById('browseResults');
   out.innerHTML='<div class="spinner"></div>';
-  const params=new URLSearchParams({store});
-  if(browseDiv)params.set('div',browseDiv);
-  if(browseSec)params.set('sec',browseSec);
-  if(browseDep)params.set('dep',browseDep);
-  if(browseBrand)params.set('brand',browseBrand);
-  if(selectedSizes.size)params.set('size',[...selectedSizes].join(','));
+  const divs=[...msState.div],secs=[...msState.sec],deps=[...msState.dep];
+  const makeParams=(d,s,p)=>{
+    const params=new URLSearchParams({store});
+    if(d)params.set('div',d);if(s)params.set('sec',s);if(p)params.set('dep',p);
+    if(browseBrand)params.set('brand',browseBrand);
+    if(selectedSizes.size)params.set('size',[...selectedSizes].join(','));
+    return params;
+  };
+  const queries=[];
+  const dList=divs.length?divs:[''],sList=secs.length?secs:[''],pList=deps.length?deps:[''];
+  for(const d of dList)for(const s of sList)for(const p of pList)
+    queries.push(fetch(`/api/browse?${makeParams(d,s,p)}`).then(r=>r.json()));
   try{
-    const res=await fetch(`/api/browse?${params}`);const data=await res.json();
-    if(!res.ok){out.innerHTML=`<div class="error-msg">${data.error||'Failed.'}</div>`;return;}
-    if(!data.brands||data.brands.length===0){out.innerHTML='<div class="empty">No brands found for these filters</div>';return;}
-    const inStock=data.brands.filter(b=>b.inStock>0),noStock=data.brands.filter(b=>b.inStock===0);
+    const results=await Promise.all(queries);
+    const brandMap={};
+    for(const data of results){if(!data.brands)continue;for(const b of data.brands){if(!brandMap[b.brand])brandMap[b.brand]={brand:b.brand,total:0,inStock:0};brandMap[b.brand].total+=b.total;brandMap[b.brand].inStock+=b.inStock;}}
+    const brands=Object.values(brandMap).sort((a,b)=>b.inStock-a.inStock||a.brand.localeCompare(b.brand));
+    if(!brands.length){out.innerHTML='<div class="empty">No brands found for these filters</div>';return;}
+    const inStock=brands.filter(b=>b.inStock>0),noStock=brands.filter(b=>b.inStock===0);
     let html='';
     if(inStock.length){html+=`<div class="section-label">In Stock (${inStock.length} brands)</div>`;html+=inStock.map(b=>renderBrandCard(b,store)).join('');}
     if(noStock.length){html+=`<div class="section-label" style="color:#f87171">No Stock (${noStock.length} brands)</div>`;html+=noStock.map(b=>renderBrandCard(b,store)).join('');}
@@ -515,8 +526,10 @@ async function doBrowse(){
 
 function renderBrandCard(b,store){
   const initial=b.brand.charAt(0).toUpperCase(),outOfTotal=b.total-b.inStock;
-  const safeB=b.brand.replace(/'/g,"\\'"),safeDiv=(browseDiv||'').replace(/'/g,"\\'");
-  const safeSec=(browseSec||'').replace(/'/g,"\\'"),safeDep=(browseDep||'').replace(/'/g,"\\'");
+  const safeB=b.brand.replace(/'/g,"\\'");
+  const safeDiv=[...msState.div].join('|').replace(/'/g,"\\'");
+  const safeSec=[...msState.sec].join('|').replace(/'/g,"\\'");
+  const safeDep=[...msState.dep].join('|').replace(/'/g,"\\'");
   const safeSz=[...selectedSizes].join(',').replace(/'/g,"\\'");
   return `<div class="brand-card" onclick="openBrandProducts('${safeB}','${store}','${safeDiv}','${safeSec}','${safeDep}','${safeSz}')">
     <div class="brand-logo">${initial}</div>
@@ -528,17 +541,24 @@ function renderBrandCard(b,store){
   </div>`;
 }
 
-async function openBrandProducts(brand,store,div,sec,dep,sizeStr){
+async function openBrandProducts(brand,store,divStr,secStr,depStr,sizeStr){
   document.getElementById('brandModalTitle').textContent=brand;
   document.getElementById('brandModalBody').innerHTML='<div class="modal-loading">Loading…</div>';
   document.getElementById('brandModal').classList.add('open');
-  const params=new URLSearchParams({store,brand});
-  if(div)params.set('div',div);if(sec)params.set('sec',sec);if(dep)params.set('dep',dep);if(sizeStr)params.set('size',sizeStr);
+  const divs=divStr?divStr.split('|'):[''],secs=secStr?secStr.split('|'):[''],deps=depStr?depStr.split('|'):[''];
+  const queries=[];
+  for(const d of divs)for(const s of secs)for(const p of deps){
+    const params=new URLSearchParams({store,brand});
+    if(d)params.set('div',d);if(s)params.set('sec',s);if(p)params.set('dep',p);if(sizeStr)params.set('size',sizeStr);
+    queries.push(fetch(`/api/brand-products?${params}`).then(r=>r.json()));
+  }
   try{
-    const res=await fetch(`/api/brand-products?${params}`);const data=await res.json();
-    if(!res.ok||!data.products){document.getElementById('brandModalBody').innerHTML=`<div class="error-msg">${data.error||'Failed.'}</div>`;return;}
-    if(data.products.length===0){document.getElementById('brandModalBody').innerHTML='<div class="modal-loading">No products found.</div>';return;}
-    const inStock=data.products.filter(r=>hasStock(r)),outStock=data.products.filter(r=>!hasStock(r));
+    const results=await Promise.all(queries);
+    const seen=new Set(),products=[];
+    for(const data of results){if(!data.products)continue;for(const p of data.products){const key=p.barcode||(p.itemName+p.size);if(!seen.has(key)){seen.add(key);products.push(p);}}}
+    if(!products.length){document.getElementById('brandModalBody').innerHTML='<div class="modal-loading">No products found.</div>';return;}
+    products.sort((a,b)=>(hasStock(b)?1:0)-(hasStock(a)?1:0));
+    const inStock=products.filter(r=>hasStock(r)),outStock=products.filter(r=>!hasStock(r));
     let html='';
     if(inStock.length){html+=`<div class="section-label">In Stock (${inStock.length})</div>`;html+=inStock.map(r=>renderCard(r,store)).join('');}
     if(outStock.length){html+=`<div class="section-label" style="color:#f87171">Out of Stock (${outStock.length})</div>`;html+=outStock.map(r=>renderCard(r,store)).join('');}
@@ -567,7 +587,6 @@ async function doSearch(){
     out.innerHTML=html;
   }catch(e){out.innerHTML=`<div class="error-msg">Network error: ${e.message}</div>`;}
 }
-
 function renderCard(r,store){
   const name=r.itemName||r.vendorArticleName||r.barcode||'—';
   const f=parseInt(r.storeStock)||0,w=parseInt(r.warehouseStock)||0,stockout=f===0&&w===0;
