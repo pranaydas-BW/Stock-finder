@@ -34,11 +34,13 @@
   .scan-btn:active { background: #2d2d4e; }
   button.search-btn, button.browse-btn { width: 100%; padding: 13px; background: #6366f1; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s; }
   button.search-btn:disabled, button.browse-btn:disabled { background: #a5a7f5; cursor: not-allowed; }
-  .size-chips-wrap { margin-bottom: 12px; }
-  .size-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; }
-  .size-chip { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1.5px solid #ddd; background: #fafafa; cursor: pointer; color: #555; transition: all .15s; white-space: nowrap; user-select: none; }
-  .size-chip.selected { background: #6366f1; color: #fff; border-color: #6366f1; }
-  .size-chips-empty { font-size: 12px; color: #bbb; padding: 6px 0; }
+  .size-multiselect { width:100%; border:1.5px solid #ddd; border-radius:10px; background:#fafafa; margin-bottom:12px; overflow:hidden; }
+  .size-multiselect select { width:100%; border:none; background:transparent; padding:8px 14px; font-size:14px; outline:none; cursor:pointer; }
+  .size-selected-tags { display:flex; flex-wrap:wrap; gap:5px; padding:8px 10px; border-top:1px solid #f0f0f0; min-height:36px; }
+  .size-tag { background:#6366f1; color:#fff; font-size:12px; font-weight:600; padding:3px 8px; border-radius:20px; display:flex; align-items:center; gap:4px; }
+  .size-tag-remove { cursor:pointer; font-size:14px; line-height:1; opacity:.8; }
+  .size-tag-remove:hover { opacity:1; }
+  .size-none { font-size:12px; color:#bbb; padding:2px 4px; }
   .loading-banner { background: #fefce8; border: 1px solid #fde047; color: #854d0e; padding: 12px 20px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
   .loading-banner.hidden { display: none; }
   .mini-spin { width: 16px; height: 16px; border: 2px solid #fde047; border-top-color: #854d0e; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
@@ -189,10 +191,13 @@
       <button class="brand-clear" id="browseBrandClear" onclick="clearBrowseBrand()">✕</button>
       <div class="brand-dropdown" id="browseBrandDropdown"></div>
     </div>
-    <label>Size <span style="font-weight:400;text-transform:none">(tap to multi-select)</span></label>
-    <div class="size-chips-wrap">
-      <div class="size-chips" id="sizeChips">
-        <span class="size-chips-empty">Select filters above to see sizes</span>
+    <label>Size <span style="font-weight:400;text-transform:none">(multi-select)</span></label>
+    <div class="size-multiselect">
+      <select id="sizeDropdown" onchange="onSizeDropdownChange(this)">
+        <option value="">Select sizes…</option>
+      </select>
+      <div class="size-selected-tags" id="sizeSelectedTags">
+        <span class="size-none" id="sizeNoneLabel">No sizes selected</span>
       </div>
     </div>
     <button class="browse-btn" id="browseBtn" onclick="doBrowse()" disabled>Loading data…</button>
@@ -477,7 +482,8 @@ function resetBrowseFilters(){
   document.getElementById('secSelect').innerHTML='<option value="">All Sections</option>';
   document.getElementById('depSelect').innerHTML='<option value="">All Departments</option>';
   document.getElementById('secSelect').disabled=true; document.getElementById('depSelect').disabled=true;
-  document.getElementById('sizeChips').innerHTML='<span class="size-chips-empty">Select filters above to see sizes</span>';
+  document.getElementById('sizeDropdown').innerHTML='<option value="">Select sizes…</option>';
+  document.getElementById('sizeSelectedTags').innerHTML='<span class="size-none" id="sizeNoneLabel">No sizes selected</span>';
   updateBrowseBtn();
 }
 
