@@ -17,8 +17,8 @@ function csvUrl(gid) { return `https://docs.google.com/spreadsheets/d/${SHEET_ID
 const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department']);
 const cache = { hyderabad:[], delhi:[], pune:[], mumbai:[], lastFetched:null, status:'empty' };
 const brandIndex = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
-const sizeIndex  = { hyderabad:[], delhi:[], pune:[] };
-const taxIndex   = { hyderabad:{}, delhi:{}, pune:{} };
+const sizeIndex  = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
+const taxIndex   = { hyderabad:{}, delhi:{}, pune:{}, mumbai:{} };
 
 function parseCSVLean(text) {
   const lines = text.split('\n'); if (lines.length < 2) return [];
@@ -81,9 +81,9 @@ function buildIndexes(storeKey) {
 async function refreshCache() {
   cache.status='loading'; const t0=Date.now();
   try {
-    const [hyd,del,pun]=await Promise.all([fetchStore('hyderabad'),fetchStore('delhi'),fetchStore('pune')]);
-    cache.hyderabad=hyd;cache.delhi=del;cache.pune=pun;
-    for(const k of ['hyderabad','delhi','pune'])buildIndexes(k);
+    const [hyd,del,pun,mum]=await Promise.all([fetchStore('hyderabad'),fetchStore('delhi'),fetchStore('pune'),fetchStore('mumbai')]);
+    cache.hyderabad=hyd;cache.delhi=del;cache.pune=pun;cache.mumbai=mum;
+    for(const k of ['hyderabad','delhi','pune','mumbai'])buildIndexes(k);
     cache.lastFetched=new Date();cache.status='ready';
     console.log(`[cache] All done in ${Date.now()-t0}ms | heap:${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB`);
   } catch(err){cache.status='error';console.error('[cache] Refresh failed:',err.message);}
@@ -115,7 +115,7 @@ function toCard(row,storeName){return{barcode:row.bc,brand:row.brand,vendorArtic
 function hasStock(card){return(parseInt(card.storeStock)||0)>0||(parseInt(card.warehouseStock)||0)>0;}
 
 app.use(express.static(path.join(__dirname,'public')));
-app.get('/api/status',(req,res)=>res.json({status:cache.status,lastFetched:cache.lastFetched,counts:{hyderabad:cache.hyderabad.length,delhi:cache.delhi.length,pune:cache.pune.length},heapMB:Math.round(process.memoryUsage().heapUsed/1024/1024)}));
+app.get('/api/status',(req,res)=>res.json({status:cache.status,lastFetched:cache.lastFetched,counts:{hyderabad:cache.hyderabad.length,delhi:cache.delhi.length,pune:cache.pune.length,mumbai:cache.mumbai.length},heapMB:Math.round(process.memoryUsage().heapUsed/1024/1024)}));
 app.post('/api/refresh',(req,res)=>{refreshCache();res.json({ok:true});});
 app.get('/api/brands',(req,res)=>{const{store}=req.query;if(!store)return res.status(400).json({error:'Missing store.'});if(cache.status!=='ready')return res.status(503).json({error:'Data not ready.'});res.json({brands:brandIndex[store.toLowerCase()]||[]});});
 
