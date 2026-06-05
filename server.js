@@ -9,13 +9,14 @@ const SHEET_ID = '1Uo7OtHVekjsuTSfVodzUNqkL5dtOneM1GwPn85OG_gM';
 const STORES = {
   hyderabad: { gid: '0',          label: 'Hyderabad' },
   delhi:     { gid: '2053559649', label: 'Delhi'     },
-  pune:      { gid: '688522673',  label: 'Pune'      },
+  pune:     { gid: '688522673',  label: 'Pune'      },
+  mumbai:   { gid: '144905209',  label: 'Mumbai'    },
 };
 function csvUrl(gid) { return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`; }
 
 const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department']);
-const cache = { hyderabad:[], delhi:[], pune:[], lastFetched:null, status:'empty' };
-const brandIndex = { hyderabad:[], delhi:[], pune:[] };
+const cache = { hyderabad:[], delhi:[], pune:[], mumbai:[], lastFetched:null, status:'empty' };
+const brandIndex = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
 const sizeIndex  = { hyderabad:[], delhi:[], pune:[] };
 const taxIndex   = { hyderabad:{}, delhi:{}, pune:{} };
 
