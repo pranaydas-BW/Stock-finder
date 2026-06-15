@@ -21,16 +21,9 @@ const sizeIndex  = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
 const taxIndex   = { hyderabad:{}, delhi:{}, pune:{}, mumbai:{} };
 
 function parseCSVLean(text) {
-  const lines = []; let cur = '', inQ = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (c === '"') { inQ = !inQ; cur += c; }
-    else if (c === '\n' && inQ) { cur += '\n'; }
-    else if (c === '\n') { lines.push(cur); cur = ''; }
-    else { cur += c; }
-  }
-  if (cur) lines.push(cur);
-  if (lines.length < 2) return [];
+  // Replace newlines inside quoted fields with a space before splitting
+  text = text.replace(/"[^"]*"/g, m => m.replace(/\n/g, ' '));
+  const lines = text.split('\n'); if (lines.length < 2) return [];
   const splitLine = (line) => {
     const cols=[]; let start=0, inQ=false;
     for (let i=0;i<=line.length;i++) {
