@@ -71,6 +71,7 @@
   .badge { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
   .badge.green { background: #dcfce7; color: #16a34a; }
   .badge.red   { background: #fee2e2; color: #dc2626; }
+  .badge.rsp   { background: #ede9fe; color: #5b21b6; font-size: 14px; }
   .style-btn { margin-left: auto; font-size: 12px; color: #6366f1; font-weight: 600; background: #eef2ff; border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
   .brand-card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); display: flex; align-items: center; gap: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .brand-card:active { box-shadow: 0 3px 12px rgba(99,102,241,.2); }
@@ -596,7 +597,7 @@ function renderCard(r,store){
     <div class="card-top"><div class="item-name">${name}</div><span class="store-tag">${r.store}</span></div>
     <div class="card-meta">
       ${r.barcode?`<span>📦 ${r.barcode}</span>`:''}${r.brand?`<span>🏷 ${r.brand}</span>`:''}
-      ${r.size?`<span>📐 ${r.size}</span>`:''}${r.mrp?`<span>₹ ${r.mrp} MRP</span>`:''}${r.rsp?`<span>₹ ${r.rsp} RSP</span>`:''}
+      ${r.size?`<span>📐 ${r.size}</span>`:''}${r.mrp?`<span>₹ ${r.mrp} MRP</span>`:''}${r.rsp?`<span class="badge rsp">₹ ${r.rsp} RSP</span>`:''}
       ${r.styleId?`<span>🆔 ${r.styleId}</span>`:''}${r.expiryDate?`<span>⏳ ${r.expiryDate}</span>`:''}
     </div>
     <div class="stock-row">
@@ -620,7 +621,7 @@ async function openStyleModal(styleId,store){
       const f=parseInt(r.storeStock)||0,w=parseInt(r.warehouseStock)||0;
       return `<div class="card${f===0&&w===0?' stockout':''}">
         <div class="card-top"><div class="item-name">${name}</div></div>
-        <div class="card-meta">${r.barcode?`<span>📦 ${r.barcode}</span>`:''} ${r.size?`<span>📐 ${r.size}</span>`:''}</div>
+        <div class="card-meta">${r.barcode?`<span>📦 ${r.barcode}</span>`:''} ${r.size?`<span>📐 ${r.size}</span>`:''} ${r.mrp?`<span>₹${r.mrp} MRP</span>`:''} ${r.rsp?`<span class="badge rsp">₹${r.rsp} RSP</span>`:''}</div>
         <div class="stock-row"><span class="badge ${f>0?'green':'red'}">Floor: ${f}</span><span class="badge ${w>0?'green':'red'}">WH: ${w}</span></div>
       </div>`;
     }).join('');
