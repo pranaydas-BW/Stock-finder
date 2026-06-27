@@ -14,7 +14,7 @@ const STORES = {
 };
 function csvUrl(gid) { return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`; }
 
-const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department']);
+const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','RSP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department']);
 const cache = { hyderabad:[], delhi:[], pune:[], mumbai:[], lastFetched:null, status:'empty' };
 const brandIndex = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
 const sizeIndex  = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
@@ -36,7 +36,7 @@ function parseCSVLean(text) {
   const rawHeaders=splitLine(lines[0]).map(h=>h.replace(/^\uFEFF/,'').trim());
   const idx={}; rawHeaders.forEach((h,i)=>{if(KEEP_COLS.has(h))idx[h]=i;});
   const iBC=idx['BARCODE']??-1,iBrand=idx['Brand']??-1,iVAN=idx['Vendor Article Name']??-1;
-  const iName=idx['Item Name']??-1,iSize=idx['Size']??-1,iMRP=idx['MRP']??-1;
+  const iName=idx['Item Name']??-1,iSize=idx['Size']??-1,iMRP=idx['MRP']??-1,iRSP=idx['RSP']??-1;
   const iExp=idx['Expiry Date']??-1,iWH=idx['Ware house stock']??-1,iFloor=idx['Store stock']??-1;
   const iStyle=idx['Style Group ID']??-1,iDiv=idx['Division']??-1,iSec=idx['Section']??-1,iDep=idx['Department']??-1;
   const rows=[];
@@ -46,7 +46,7 @@ function parseCSVLean(text) {
     const bc=iBC>=0?(v[iBC]||'').trim():'',iname=iName>=0?(v[iName]||'').trim():'',van=iVAN>=0?(v[iVAN]||'').trim():'';
     if(!bc&&!iname&&!van)continue;
     rows.push({bc,van,iname,brand:iBrand>=0?(v[iBrand]||'').trim():'',size:iSize>=0?(v[iSize]||'').trim():'',
-      mrp:iMRP>=0?(v[iMRP]||'').trim():'',exp:iExp>=0?(v[iExp]||'').trim():'',
+      mrp:iMRP>=0?(v[iMRP]||'').trim():'',rsp:iRSP>=0?(v[iRSP]||'').trim():'',exp:iExp>=0?(v[iExp]||'').trim():'',
       wh:iWH>=0?(v[iWH]||'0').trim():'0',floor:iFloor>=0?(v[iFloor]||'0').trim():'0',
       style:iStyle>=0?(v[iStyle]||'').trim():'',div:iDiv>=0?(v[iDiv]||'').trim():'',
       sec:iSec>=0?(v[iSec]||'').trim():'',dep:iDep>=0?(v[iDep]||'').trim():'',
@@ -113,7 +113,7 @@ function fuzzyScore(query,target){
   let matched=0; for(const qt of qT)for(const tt of tT)if(tokenFuzzy(qt,tt)){matched++;break;}
   const r=matched/qT.length; if(r===1)return 80;if(r>=0.7)return 50;return 0;
 }
-function toCard(row,storeName){return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp:row.mrp,expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style};}
+function toCard(row,storeName){return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp:row.mrp,rsp:row.rsp,expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style};}
 function hasStock(card){return(parseInt(card.storeStock)||0)>0||(parseInt(card.warehouseStock)||0)>0;}
 
 app.use(express.static(path.join(__dirname,'public')));

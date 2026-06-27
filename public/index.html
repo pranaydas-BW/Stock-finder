@@ -596,7 +596,7 @@ function renderCard(r,store){
     <div class="card-top"><div class="item-name">${name}</div><span class="store-tag">${r.store}</span></div>
     <div class="card-meta">
       ${r.barcode?`<span>📦 ${r.barcode}</span>`:''}${r.brand?`<span>🏷 ${r.brand}</span>`:''}
-      ${r.size?`<span>📐 ${r.size}</span>`:''}${r.mrp?`<span>₹ ${r.mrp}</span>`:''}
+      ${r.size?`<span>📐 ${r.size}</span>`:''}${r.mrp?`<span>₹ ${r.mrp} MRP</span>`:''}${r.rsp?`<span>₹ ${r.rsp} RSP</span>`:''}
       ${r.styleId?`<span>🆔 ${r.styleId}</span>`:''}${r.expiryDate?`<span>⏳ ${r.expiryDate}</span>`:''}
     </div>
     <div class="stock-row">
