@@ -14,7 +14,7 @@ const STORES = {
 };
 function csvUrl(gid) { return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`; }
 
-const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department']);
+const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','RSP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department']);
 const cache = { hyderabad:[], delhi:[], pune:[], mumbai:[], lastFetched:null, status:'empty' };
 const brandIndex = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
 const sizeIndex  = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
