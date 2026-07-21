@@ -199,10 +199,17 @@ app.get('/api/search',(req,res)=>{
     const pk=store.toLowerCase();
     const pool=brand?cache[pk].filter(r=>norm(r.brand)===norm(brand)):cache[pk];
     const qn=norm(q),scored=[];
+    const isBarcodeQuery=/^\d+$/.test(qn);
     for(const row of pool){
       let score=norm(row.bc).includes(qn)?100:0;
-      if(score===0)score=Math.max(fuzzyScore(q,row.iname),fuzzyScore(q,row.van));
+      if(score===0&&!isBarcodeQuery)score=Math.max(fuzzyScore(q,row.iname),fuzzyScore(q,row.van));
       if(score>0)scored.push({score,card:toCard(row,STORES[pk]?.label||pk)});
+    }
+    if(isBarcodeQuery&&scored.length===0){
+      for(const row of pool){
+        const score=Math.max(fuzzyScore(q,row.iname),fuzzyScore(q,row.van));
+        if(score>0)scored.push({score,card:toCard(row,STORES[pk]?.label||pk)});
+      }
     }
     scored.sort((a,b)=>{const aS=hasStock(a.card)?1:0,bS=hasStock(b.card)?1:0;if(bS!==aS)return bS-aS;return b.score-a.score;});
     res.json({primary:scored.map(s=>s.card),total:scored.length,lastFetched:cache.lastFetched});
