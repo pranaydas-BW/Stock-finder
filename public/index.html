@@ -216,7 +216,7 @@
 <!-- TOP STYLES TAB -->
 <div id="panel-topstyles" class="panel">
   <div class="controls">
-    <div style="font-size:12px;color:#888;margin-bottom:12px">Top 20 style IDs by Sales Qty (60D) for a brand — only styles with 3 or more barcodes are shown.</div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">Top 20 style IDs by Sales Qty (60D) for a brand — only styles with 3 or more in-stock barcodes are shown.</div>
     <label>Brand</label>
     <div class="brand-wrap" style="margin-bottom:12px">
       <input type="text" id="topStylesBrandInput" placeholder="Type to select a brand…" autocomplete="off"
@@ -551,7 +551,7 @@ async function doTopStyles(){
     const res=await fetch(`/api/top-styles?${params}`);
     let data;try{data=await res.json();}catch{out.innerHTML='<div class="error-msg">Unexpected response.</div>';return;}
     if(!res.ok){out.innerHTML=`<div class="error-msg">${data.error||'Failed to load.'}</div>`;return;}
-    if(!data.styles||!data.styles.length){out.innerHTML='<div class="empty">No styles with 3 or more barcodes and sales data found for this brand.</div>';return;}
+    if(!data.styles||!data.styles.length){out.innerHTML='<div class="empty">No styles with 3 or more in-stock barcodes and sales data found for this brand.</div>';return;}
     let html='';
     if(data.mode==='sku'){
       html+='<div style="font-size:12px;color:#888;margin-bottom:10px">This brand has no style IDs — showing top individual SKUs by sales instead.</div>';

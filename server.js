@@ -222,7 +222,7 @@ app.get('/api/top-styles',(req,res)=>{
         entry.rows.push(row);
         if(!entry.itemName&&(row.iname||row.van))entry.itemName=row.iname||row.van;
       }
-      const ranked=Object.values(styleMap).filter(s=>s.rows.length>=3).sort((a,b)=>b.totalSales-a.totalSales).slice(0,20);
+      const ranked=Object.values(styleMap).filter(s=>s.rows.filter(r=>(parseInt(r.floor)||0)+(parseInt(r.wh)||0)>0).length>=3).sort((a,b)=>b.totalSales-a.totalSales).slice(0,20);
       const styles=ranked.map(s=>{
         const barcodeCount=s.rows.length;
         const items=s.rows.map(r=>toCard(r,storeName));
