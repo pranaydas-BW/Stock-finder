@@ -64,6 +64,8 @@
   .card.stockout { opacity: .55; }
   .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
   .item-name { font-size: 15px; font-weight: 700; color: #1a1a2e; flex: 1; line-height: 1.3; }
+  .item-name-wrap { flex: 1; min-width: 0; }
+  .item-vendor { font-size: 11px; color: #999; font-weight: 500; margin-top: 2px; }
   .store-tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; background: #eef2ff; color: #6366f1; white-space: nowrap; }
   .card-meta { font-size: 12px; color: #888; margin-bottom: 10px; line-height: 1.8; }
   .card-meta span { margin-right: 10px; }
@@ -733,7 +735,13 @@ function renderCard(r,store){
   const f=parseInt(r.storeStock)||0,w=parseInt(r.warehouseStock)||0,stockout=f===0&&w===0;
   const styleBtn=r.styleId?`<button class="style-btn" onclick="event.stopPropagation();openStyleModal('${r.styleId.replace(/'/g,"\\'")}','${store}')">🔗 Style</button>`:'';
   return `<div class="card${stockout?' stockout':''}">
-    <div class="card-top"><div class="item-name">${name}</div><span class="store-tag">${r.store}</span></div>
+    <div class="card-top">
+      <div class="item-name-wrap">
+        <div class="item-name">${name}</div>
+        ${r.vendorArticleName&&r.vendorArticleName!==name?`<div class="item-vendor">🏭 ${r.vendorArticleName}</div>`:''}
+      </div>
+      <span class="store-tag">${r.store}</span>
+    </div>
     <div class="card-meta">
       ${r.barcode?`<span>📦 ${r.barcode}</span>`:''}${r.brand?`<span>🏷 ${r.brand}</span>`:''}
       ${r.size?`<span>📐 ${r.size}</span>`:''}${r.mrp?`<span>₹ ${r.mrp} MRP</span>`:''}${r.rsp?`<span class="badge rsp">₹ ${r.rsp} RSP</span>`:''}
@@ -759,7 +767,12 @@ async function openStyleModal(styleId,store){
       const name=r.itemName||r.vendorArticleName||r.barcode||'—';
       const f=parseInt(r.storeStock)||0,w=parseInt(r.warehouseStock)||0;
       return `<div class="card${f===0&&w===0?' stockout':''}">
-        <div class="card-top"><div class="item-name">${name}</div></div>
+        <div class="card-top">
+          <div class="item-name-wrap">
+            <div class="item-name">${name}</div>
+            ${r.vendorArticleName&&r.vendorArticleName!==name?`<div class="item-vendor">🏭 ${r.vendorArticleName}</div>`:''}
+          </div>
+        </div>
         <div class="card-meta">${r.barcode?`<span>📦 ${r.barcode}</span>`:''} ${r.size?`<span>📐 ${r.size}</span>`:''} ${r.mrp?`<span>₹${r.mrp} MRP</span>`:''} ${r.rsp?`<span class="badge rsp">₹${r.rsp} RSP</span>`:''}</div>
         <div class="stock-row"><span class="badge ${f>0?'green':'red'}">Floor: ${f}</span><span class="badge ${w>0?'green':'red'}">WH: ${w}</span></div>
       </div>`;
