@@ -14,7 +14,7 @@ const STORES = {
 };
 function csvUrl(gid) { return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`; }
 
-const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','RSP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department']);
+const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','RSP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department','Sales Qty (60D)']);
 const cache = { hyderabad:[], delhi:[], pune:[], mumbai:[], lastFetched:null, status:'empty' };
 const brandIndex = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
 const sizeIndex  = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
@@ -39,6 +39,7 @@ function parseCSVLean(text) {
   const iName=idx['Item Name']??-1,iSize=idx['Size']??-1,iMRP=idx['MRP']??-1,iRSP=idx['RSP']??-1;
   const iExp=idx['Expiry Date']??-1,iWH=idx['Ware house stock']??-1,iFloor=idx['Store stock']??-1;
   const iStyle=idx['Style Group ID']??-1,iDiv=idx['Division']??-1,iSec=idx['Section']??-1,iDep=idx['Department']??-1;
+  const iSales=idx['Sales Qty (60D)']??-1;
   const rows=[];
   for (let i=1;i<lines.length;i++) {
     const line=lines[i]; if(!line.trim())continue;
@@ -50,6 +51,7 @@ function parseCSVLean(text) {
       wh:iWH>=0?(v[iWH]||'0').trim():'0',floor:iFloor>=0?(v[iFloor]||'0').trim():'0',
       style:iStyle>=0?(v[iStyle]||'').trim():'',div:iDiv>=0?(v[iDiv]||'').trim():'',
       sec:iSec>=0?(v[iSec]||'').trim():'',dep:iDep>=0?(v[iDep]||'').trim():'',
+      sales:iSales>=0?(v[iSales]||'0').trim():'0',
     });
   }
   return rows;
@@ -113,7 +115,7 @@ function fuzzyScore(query,target){
   let matched=0; for(const qt of qT)for(const tt of tT)if(tokenFuzzy(qt,tt)){matched++;break;}
   const r=matched/qT.length; if(r===1)return 80;if(r>=0.7)return 50;return 0;
 }
-function toCard(row,storeName){const[mrp,rsp]=(row.mrp||'').split('|');return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp,rsp:rsp||'',expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style};}
+function toCard(row,storeName){const[mrp,rsp]=(row.mrp||'').split('|');return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp,rsp:rsp||'',expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style,salesQty:parseInt(row.sales)||0};}
 function hasStock(card){return(parseInt(card.storeStock)||0)>0||(parseInt(card.warehouseStock)||0)>0;}
 
 app.use(express.static(path.join(__dirname,'public')));
@@ -187,6 +189,36 @@ app.get('/api/brand-products',(req,res)=>{
     }).map(r=>toCard(r,storeName));
     results.sort((a,b)=>(hasStock(b)?1:0)-(hasStock(a)?1:0));
     res.json({products:results,total:results.length});
+  } catch(err){res.status(500).json({error:'Internal error: '+err.message});}
+});
+
+app.get('/api/top-styles',(req,res)=>{
+  try {
+    const{store,brand}=req.query; if(!store||!brand)return res.status(400).json({error:'Missing store or brand.'});
+    if(cache.status!=='ready')return res.status(503).json({error:'Data not ready.'});
+    const pk=store.toLowerCase(),storeName=STORES[pk]?.label||pk,bn=norm(brand);
+    const pool=cache[pk].filter(r=>norm(r.brand)===bn&&r.style);
+    const styleMap={};
+    for(const row of pool){
+      const sid=row.style;
+      if(!styleMap[sid])styleMap[sid]={styleId:sid,itemName:'',totalSales:0,rows:[]};
+      const entry=styleMap[sid];
+      entry.totalSales+=parseInt(row.sales)||0;
+      entry.rows.push(row);
+      if(!entry.itemName&&(row.iname||row.van))entry.itemName=row.iname||row.van;
+    }
+    const ranked=Object.values(styleMap).sort((a,b)=>b.totalSales-a.totalSales).slice(0,20);
+    const styles=ranked.map(s=>{
+      const barcodeCount=s.rows.length;
+      const out={styleId:s.styleId,itemName:s.itemName,totalSales:s.totalSales,barcodeCount};
+      if(barcodeCount>=3){
+        const items=s.rows.map(r=>toCard(r,storeName));
+        items.sort((a,b)=>(hasStock(b)?1:0)-(hasStock(a)?1:0));
+        out.barcodes=items;
+      }
+      return out;
+    });
+    res.json({styles,total:styles.length});
   } catch(err){res.status(500).json({error:'Internal error: '+err.message});}
 });
 
