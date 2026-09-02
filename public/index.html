@@ -73,6 +73,8 @@
   .badge.red   { background: #fee2e2; color: #dc2626; }
   .badge.rsp   { background: #ede9fe; color: #5b21b6; font-size: 14px; }
   .style-btn { margin-left: auto; font-size: 12px; color: #6366f1; font-weight: 600; background: #eef2ff; border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+  .topstyle-detail { display: none; margin-top: 10px; flex-direction: column; gap: 8px; }
+  .topstyle-detail.open { display: flex; }
   .brand-card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); display: flex; align-items: center; gap: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .brand-card:active { box-shadow: 0 3px 12px rgba(99,102,241,.2); }
   .brand-logo { width: 44px; height: 44px; border-radius: 10px; background: #eef2ff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #6366f1; flex-shrink: 0; }
@@ -261,7 +263,6 @@ let cacheReady=false, allBrands=[], selectedBrand='', highlightIdx=-1, statusPol
 let scannerReader=null, scannerActive=false;
 let browseBrand='', selectedSizes=new Set();
 let topStylesBrand='', topStylesBrandList=[], topStylesBrandHighlight=-1, topStylesDep='';
-const expandedStyles=new Set();
 const msState={div:new Set(),sec:new Set(),dep:new Set()};
 const msOptions={div:[],sec:[],dep:[]};
 let browseBrandList=[], browseBrandHighlight=-1;
@@ -281,7 +282,7 @@ function onStoreChange(){
   document.getElementById('searchResults').innerHTML='<div class="empty">Select a store and search above</div>';
   document.getElementById('browseResults').innerHTML='<div class="empty">Select at least one filter and tap Browse</div>';
   resetBrowseFilters();
-  clearTopStylesBrand();topStylesBrandList=[];expandedStyles.clear();topStylesDep='';
+  clearTopStylesBrand();topStylesBrandList=[];topStylesDep='';
   document.getElementById('topStylesResults').innerHTML='<div class="empty">Select a brand and tap Show Top Styles</div>';
 }
 
@@ -492,7 +493,7 @@ function selectTopStylesBrand(brand){
   topStylesBrand=brand;document.getElementById('topStylesBrandInput').value=brand;
   document.getElementById('topStylesBrandDropdown').classList.remove('open');
   document.getElementById('topStylesBrandClear').classList.add('visible');
-  expandedStyles.clear();topStylesDep='';
+  topStylesDep='';
   loadTopStylesDepartments();
   updateTopStylesBtn();
 }
@@ -511,7 +512,6 @@ async function loadTopStylesDepartments(){
 }
 function onTopStylesDepChange(){
   topStylesDep=document.getElementById('topStylesDepSelect').value;
-  expandedStyles.clear();
   if(topStylesBrand)doTopStyles();
 }
 function clearTopStylesBrand(){
@@ -563,24 +563,23 @@ function renderStyleCard(s,rank,store){
     const card=s.barcodes[0];
     return `<div style="margin-bottom:2px;font-size:11px;font-weight:700;color:#6366f1">#${rank} — ${s.totalSales} sold (60D)</div>${renderCard(card,store)}`;
   }
-  const safeSid=s.styleId.replace(/'/g,"\\'");
-  const isOpen=expandedStyles.has(s.styleId);
-  let html=`<div class="card">
+  const barcodesHtml=s.barcodes.map(r=>renderCard(r,store)).join('');
+  return `<div class="card">
     <div class="card-top">
       <div class="item-name">#${rank} — ${s.itemName||s.styleId}</div>
       <span class="store-tag">${s.totalSales} sold (60D)</span>
     </div>
     <div class="card-meta"><span>🆔 ${s.styleId}</span><span>📦 ${s.barcodeCount} barcodes</span></div>
-    <button class="style-btn" style="margin-left:0" onclick="toggleStyleExpand('${safeSid}')">${isOpen?'▲ Hide barcodes':'▼ Show barcodes'}</button>`;
-  if(isOpen){
-    html+='<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">'+s.barcodes.map(r=>renderCard(r,store)).join('')+'</div>';
-  }
-  html+='</div>';
-  return html;
+    <button class="style-btn" id="topstyle-btn-${rank}" style="margin-left:0" onclick="toggleStyleExpand(${rank})">▼ Show barcodes</button>
+    <div class="topstyle-detail" id="topstyle-detail-${rank}">${barcodesHtml}</div>
+  </div>`;
 }
-function toggleStyleExpand(styleId){
-  if(expandedStyles.has(styleId))expandedStyles.delete(styleId);else expandedStyles.add(styleId);
-  doTopStyles();
+function toggleStyleExpand(rank){
+  const detail=document.getElementById('topstyle-detail-'+rank);
+  const btn=document.getElementById('topstyle-btn-'+rank);
+  if(!detail||!btn)return;
+  const isOpen=detail.classList.toggle('open');
+  btn.textContent=isOpen?'▲ Hide barcodes':'▼ Show barcodes';
 }
 
 // ── Size multi-select ─────────────────────────────────────────────────────────
