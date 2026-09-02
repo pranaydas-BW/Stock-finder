@@ -212,7 +212,7 @@
 <!-- TOP STYLES TAB -->
 <div id="panel-topstyles" class="panel">
   <div class="controls">
-    <div style="font-size:12px;color:#888;margin-bottom:12px">Top 20 style IDs by Sales Qty (60D) for a brand. Barcode-level detail shown only for styles with 3+ barcodes.</div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">Top 20 style IDs by Sales Qty (60D) for a brand — only styles with 3 or more barcodes are shown.</div>
     <label>Brand</label>
     <div class="brand-wrap" style="margin-bottom:12px">
       <input type="text" id="topStylesBrandInput" placeholder="Type to select a brand…" autocomplete="off"
@@ -221,6 +221,10 @@
       <button class="brand-clear" id="topStylesBrandClear" onclick="clearTopStylesBrand()">✕</button>
       <div class="brand-dropdown" id="topStylesBrandDropdown"></div>
     </div>
+    <label>Department</label>
+    <select id="topStylesDepSelect" onchange="onTopStylesDepChange()">
+      <option value="">All Departments</option>
+    </select>
     <button class="browse-btn" id="topStylesBtn" onclick="doTopStyles()" disabled>Loading data…</button>
   </div>
   <div id="topStylesResults" class="results"><div class="empty">Select a brand and tap Show Top Styles</div></div>
@@ -256,7 +260,7 @@
 let cacheReady=false, allBrands=[], selectedBrand='', highlightIdx=-1, statusPollTimer=null;
 let scannerReader=null, scannerActive=false;
 let browseBrand='', selectedSizes=new Set();
-let topStylesBrand='', topStylesBrandList=[], topStylesBrandHighlight=-1;
+let topStylesBrand='', topStylesBrandList=[], topStylesBrandHighlight=-1, topStylesDep='';
 const expandedStyles=new Set();
 const msState={div:new Set(),sec:new Set(),dep:new Set()};
 const msOptions={div:[],sec:[],dep:[]};
@@ -277,7 +281,7 @@ function onStoreChange(){
   document.getElementById('searchResults').innerHTML='<div class="empty">Select a store and search above</div>';
   document.getElementById('browseResults').innerHTML='<div class="empty">Select at least one filter and tap Browse</div>';
   resetBrowseFilters();
-  clearTopStylesBrand();topStylesBrandList=[];expandedStyles.clear();
+  clearTopStylesBrand();topStylesBrandList=[];expandedStyles.clear();topStylesDep='';
   document.getElementById('topStylesResults').innerHTML='<div class="empty">Select a brand and tap Show Top Styles</div>';
 }
 
@@ -488,13 +492,33 @@ function selectTopStylesBrand(brand){
   topStylesBrand=brand;document.getElementById('topStylesBrandInput').value=brand;
   document.getElementById('topStylesBrandDropdown').classList.remove('open');
   document.getElementById('topStylesBrandClear').classList.add('visible');
-  expandedStyles.clear();
+  expandedStyles.clear();topStylesDep='';
+  loadTopStylesDepartments();
   updateTopStylesBtn();
+}
+async function loadTopStylesDepartments(){
+  const sel=document.getElementById('topStylesDepSelect');
+  sel.innerHTML='<option value="">All Departments</option>';
+  if(!topStylesBrand)return;
+  const store=document.getElementById('storeSelect').value;
+  try{
+    const params=new URLSearchParams({store,brand:topStylesBrand});
+    const r=await fetch(`/api/top-styles-departments?${params}`);const d=await r.json();
+    (d.departments||[]).forEach(dep=>{
+      const opt=document.createElement('option');opt.value=dep;opt.textContent=dep;sel.appendChild(opt);
+    });
+  }catch{}
+}
+function onTopStylesDepChange(){
+  topStylesDep=document.getElementById('topStylesDepSelect').value;
+  expandedStyles.clear();
+  if(topStylesBrand)doTopStyles();
 }
 function clearTopStylesBrand(){
   topStylesBrand='';document.getElementById('topStylesBrandInput').value='';
   document.getElementById('topStylesBrandDropdown').classList.remove('open');
   document.getElementById('topStylesBrandClear').classList.remove('visible');
+  topStylesDep='';document.getElementById('topStylesDepSelect').innerHTML='<option value="">All Departments</option>';
   updateTopStylesBtn();
 }
 function onTopStylesBrandKey(e){
@@ -521,30 +545,35 @@ async function doTopStyles(){
   out.innerHTML='<div class="spinner"></div>';
   try{
     const params=new URLSearchParams({store,brand:topStylesBrand});
+    if(topStylesDep)params.set('dep',topStylesDep);
     const res=await fetch(`/api/top-styles?${params}`);
     let data;try{data=await res.json();}catch{out.innerHTML='<div class="error-msg">Unexpected response.</div>';return;}
     if(!res.ok){out.innerHTML=`<div class="error-msg">${data.error||'Failed to load.'}</div>`;return;}
-    if(!data.styles||!data.styles.length){out.innerHTML='<div class="empty">No styles with sales data found for this brand.</div>';return;}
-    out.innerHTML=data.styles.map((s,i)=>renderStyleCard(s,i+1,store)).join('');
+    if(!data.styles||!data.styles.length){out.innerHTML='<div class="empty">No styles with 3 or more barcodes and sales data found for this brand.</div>';return;}
+    let html='';
+    if(data.mode==='sku'){
+      html+='<div style="font-size:12px;color:#888;margin-bottom:10px">This brand has no style IDs — showing top individual SKUs by sales instead.</div>';
+    }
+    html+=data.styles.map((s,i)=>renderStyleCard(s,i+1,store)).join('');
+    out.innerHTML=html;
   }catch(e){out.innerHTML=`<div class="error-msg">Network error: ${e.message}</div>`;}
 }
 function renderStyleCard(s,rank,store){
+  if(!s.styleId){
+    const card=s.barcodes[0];
+    return `<div style="margin-bottom:2px;font-size:11px;font-weight:700;color:#6366f1">#${rank} — ${s.totalSales} sold (60D)</div>${renderCard(card,store)}`;
+  }
   const safeSid=s.styleId.replace(/'/g,"\\'");
-  const canExpand=s.barcodeCount>=3&&s.barcodes&&s.barcodes.length;
   const isOpen=expandedStyles.has(s.styleId);
   let html=`<div class="card">
     <div class="card-top">
       <div class="item-name">#${rank} — ${s.itemName||s.styleId}</div>
       <span class="store-tag">${s.totalSales} sold (60D)</span>
     </div>
-    <div class="card-meta"><span>🆔 ${s.styleId}</span><span>📦 ${s.barcodeCount} barcode${s.barcodeCount===1?'':'s'}</span></div>`;
-  if(canExpand){
-    html+=`<button class="style-btn" style="margin-left:0" onclick="toggleStyleExpand('${safeSid}')">${isOpen?'▲ Hide barcodes':'▼ Show barcodes'}</button>`;
-    if(isOpen){
-      html+='<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">'+s.barcodes.map(r=>renderCard(r,store)).join('')+'</div>';
-    }
-  } else {
-    html+=`<div style="font-size:12px;color:#bbb;margin-top:4px">Fewer than 3 barcodes — no breakdown shown</div>`;
+    <div class="card-meta"><span>🆔 ${s.styleId}</span><span>📦 ${s.barcodeCount} barcodes</span></div>
+    <button class="style-btn" style="margin-left:0" onclick="toggleStyleExpand('${safeSid}')">${isOpen?'▲ Hide barcodes':'▼ Show barcodes'}</button>`;
+  if(isOpen){
+    html+='<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">'+s.barcodes.map(r=>renderCard(r,store)).join('')+'</div>';
   }
   html+='</div>';
   return html;

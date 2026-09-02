@@ -192,33 +192,53 @@ app.get('/api/brand-products',(req,res)=>{
   } catch(err){res.status(500).json({error:'Internal error: '+err.message});}
 });
 
-app.get('/api/top-styles',(req,res)=>{
+app.get('/api/top-styles-departments',(req,res)=>{
   try {
     const{store,brand}=req.query; if(!store||!brand)return res.status(400).json({error:'Missing store or brand.'});
     if(cache.status!=='ready')return res.status(503).json({error:'Data not ready.'});
+    const pk=store.toLowerCase(),bn=norm(brand);
+    const deps=new Set();
+    for(const r of cache[pk]){ if(norm(r.brand)===bn) deps.add(r.dep||'(No Department)'); }
+    res.json({departments:[...deps].sort()});
+  } catch(err){res.status(500).json({error:'Internal error: '+err.message});}
+});
+
+app.get('/api/top-styles',(req,res)=>{
+  try {
+    const{store,brand,dep}=req.query; if(!store||!brand)return res.status(400).json({error:'Missing store or brand.'});
+    if(cache.status!=='ready')return res.status(503).json({error:'Data not ready.'});
     const pk=store.toLowerCase(),storeName=STORES[pk]?.label||pk,bn=norm(brand);
-    const pool=cache[pk].filter(r=>norm(r.brand)===bn&&r.style);
-    const styleMap={};
-    for(const row of pool){
-      const sid=row.style;
-      if(!styleMap[sid])styleMap[sid]={styleId:sid,itemName:'',totalSales:0,rows:[]};
-      const entry=styleMap[sid];
-      entry.totalSales+=parseInt(row.sales)||0;
-      entry.rows.push(row);
-      if(!entry.itemName&&(row.iname||row.van))entry.itemName=row.iname||row.van;
-    }
-    const ranked=Object.values(styleMap).sort((a,b)=>b.totalSales-a.totalSales).slice(0,20);
-    const styles=ranked.map(s=>{
-      const barcodeCount=s.rows.length;
-      const out={styleId:s.styleId,itemName:s.itemName,totalSales:s.totalSales,barcodeCount};
-      if(barcodeCount>=3){
+    let basePool=cache[pk].filter(r=>norm(r.brand)===bn);
+    if(dep)basePool=basePool.filter(r=>norm(r.dep||'(No Department)')===norm(dep));
+    const styledPool=basePool.filter(r=>r.style);
+
+    if(styledPool.length>0){
+      const styleMap={};
+      for(const row of styledPool){
+        const sid=row.style;
+        if(!styleMap[sid])styleMap[sid]={styleId:sid,itemName:'',totalSales:0,rows:[]};
+        const entry=styleMap[sid];
+        entry.totalSales+=parseInt(row.sales)||0;
+        entry.rows.push(row);
+        if(!entry.itemName&&(row.iname||row.van))entry.itemName=row.iname||row.van;
+      }
+      const ranked=Object.values(styleMap).filter(s=>s.rows.length>=3).sort((a,b)=>b.totalSales-a.totalSales).slice(0,20);
+      const styles=ranked.map(s=>{
+        const barcodeCount=s.rows.length;
         const items=s.rows.map(r=>toCard(r,storeName));
         items.sort((a,b)=>(hasStock(b)?1:0)-(hasStock(a)?1:0));
-        out.barcodes=items;
-      }
-      return out;
-    });
-    res.json({styles,total:styles.length});
+        return {styleId:s.styleId,itemName:s.itemName,totalSales:s.totalSales,barcodeCount,barcodes:items};
+      });
+      res.json({mode:'style',styles,total:styles.length});
+    } else {
+      // No style IDs exist at all for this brand (+dept filter) — fall back to top individual SKUs by sales.
+      const ranked=basePool.filter(r=>r.bc).map(r=>({row:r,sales:parseInt(r.sales)||0})).sort((a,b)=>b.sales-a.sales).slice(0,20);
+      const styles=ranked.map(x=>{
+        const card=toCard(x.row,storeName);
+        return {styleId:null,itemName:card.itemName||card.vendorArticleName||card.barcode,totalSales:x.sales,barcodeCount:1,barcodes:[card]};
+      });
+      res.json({mode:'sku',styles,total:styles.length});
+    }
   } catch(err){res.status(500).json({error:'Internal error: '+err.message});}
 });
 
