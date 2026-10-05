@@ -77,6 +77,12 @@
   .style-btn { margin-left: auto; font-size: 12px; color: #6366f1; font-weight: 600; background: #eef2ff; border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
   .topstyle-detail { display: none; margin-top: 10px; flex-direction: column; gap: 8px; }
   .topstyle-detail.open { display: flex; }
+  .stock-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .stock-table th { text-align: left; font-size: 11px; font-weight: 600; color: #888; padding: 6px 8px; border-bottom: 1.5px solid #eee; }
+  .stock-table td { padding: 8px; border-bottom: 1px solid #f3f3f3; color: #1a1a2e; }
+  .stock-table th:nth-child(n+2), .stock-table td:nth-child(n+2) { text-align: center; }
+  .stock-table tr.alert td { background: #fee2e2; color: #dc2626; font-weight: 700; }
+  .stock-legend { font-size: 12px; color: #dc2626; margin-top: 8px; }
   .brand-card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); display: flex; align-items: center; gap: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .brand-card:active { box-shadow: 0 3px 12px rgba(99,102,241,.2); }
   .brand-logo { width: 44px; height: 44px; border-radius: 10px; background: #eef2ff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #6366f1; flex-shrink: 0; }
@@ -560,12 +566,21 @@ async function doTopStyles(){
     out.innerHTML=html;
   }catch(e){out.innerHTML=`<div class="error-msg">Network error: ${e.message}</div>`;}
 }
+function renderStockTable(barcodes){
+  let anyAlert=false;
+  const rows=barcodes.map(r=>{
+    const f=parseInt(r.storeStock)||0,w=parseInt(r.warehouseStock)||0;
+    const alert=f===0&&w>0; if(alert)anyAlert=true;
+    return `<tr${alert?' class="alert"':''}><td>${r.size||'—'}</td><td>${w}</td><td>${f}</td></tr>`;
+  }).join('');
+  return `<table class="stock-table"><thead><tr><th>Size</th><th>Warehouse stock</th><th>Store stock</th></tr></thead><tbody>${rows}</tbody></table>`+(anyAlert?'<div class="stock-legend">Red rows: store stock is 0 but the warehouse has stock</div>':'');
+}
 function renderStyleCard(s,rank,store){
   if(!s.styleId){
     const card=s.barcodes[0];
     return `<div style="margin-bottom:2px;font-size:11px;font-weight:700;color:#6366f1">#${rank} — ${s.totalSales} sold (60D)</div>${renderCard(card,store)}`;
   }
-  const barcodesHtml=s.barcodes.map(r=>renderCard(r,store)).join('');
+  const barcodesHtml=renderStockTable(s.barcodes);
   return `<div class="card">
     <div class="card-top">
       <div class="item-name">#${rank} — ${s.itemName||s.styleId}</div>
