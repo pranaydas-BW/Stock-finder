@@ -75,6 +75,9 @@
   .badge.red   { background: #fee2e2; color: #dc2626; }
   .badge.sales { background: #eef2ff; color: #4338ca; }
   .badge.fresh { background: #ccfbf1; color: #0f766e; }
+  .badge.old { background: #fef3c7; color: #b45309; }
+  .badge.saleable { background: #e0f2fe; color: #0369a1; }
+  .badge.nosale { background: #f3f4f6; color: #6b7280; }
   .badge.rsp   { background: #ede9fe; color: #5b21b6; font-size: 14px; }
   .style-btn { margin-left: auto; font-size: 12px; color: #6366f1; font-weight: 600; background: #eef2ff; border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
   .topstyle-detail { display: none; margin-top: 10px; flex-direction: column; gap: 8px; }
@@ -749,7 +752,8 @@ async function doSearch(){
     out.innerHTML=html;
   }catch(e){out.innerHTML=`<div class="error-msg">Network error: ${e.message}</div>`;}
 }
-function freshBadge(r){return r.fresh?`<span class="badge fresh">Fresh · GRN ${r.grnDays===0?'today':r.grnDays+'d ago'}</span>`:'';}
+function freshBadge(r){return r.stockAge==='fresh'?'<span class="badge fresh">Fresh</span>':(r.stockAge==='old'?'<span class="badge old">Old stock</span>':'');}
+function saleBadge(r){return r.saleable===undefined?'':(r.saleable?'<span class="badge saleable">Saleable</span>':'<span class="badge nosale">0 sales</span>');}
 function renderCard(r,store){
   const name=r.itemName||r.vendorArticleName||r.barcode||'—';
   const f=parseInt(r.storeStock)||0,w=parseInt(r.warehouseStock)||0,stockout=f===0&&w===0;
@@ -772,6 +776,7 @@ function renderCard(r,store){
       <span class="badge ${w>0?'green':'red'}">WH: ${w}</span>
       <span class="badge sales">Sold (60D): ${r.salesQty||0}</span>
       ${freshBadge(r)}
+      ${saleBadge(r)}
       ${styleBtn}
     </div></div>`;
 }
@@ -796,7 +801,7 @@ async function openStyleModal(styleId,store){
           </div>
         </div>
         <div class="card-meta">${r.barcode?`<span>📦 ${r.barcode}</span>`:''} ${r.size?`<span>📐 ${r.size}</span>`:''} ${r.mrp?`<span>₹${r.mrp} MRP</span>`:''} ${r.rsp?`<span class="badge rsp">₹${r.rsp} RSP</span>`:''}</div>
-        <div class="stock-row"><span class="badge ${f>0?'green':'red'}">Floor: ${f}</span><span class="badge ${w>0?'green':'red'}">WH: ${w}</span><span class="badge sales">Sold (60D): ${r.salesQty||0}</span>${freshBadge(r)}</div>
+        <div class="stock-row"><span class="badge ${f>0?'green':'red'}">Floor: ${f}</span><span class="badge ${w>0?'green':'red'}">WH: ${w}</span><span class="badge sales">Sold (60D): ${r.salesQty||0}</span>${freshBadge(r)}${saleBadge(r)}</div>
       </div>`;
     }).join('');
   }catch(e){document.getElementById('styleModalBody').innerHTML=`<div class="error-msg">Error: ${e.message}</div>`;}

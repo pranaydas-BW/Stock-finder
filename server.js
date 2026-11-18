@@ -43,9 +43,18 @@ function parseGrnDate(s,mdy){
 }
 function todayDay(){return Math.floor((Date.now()+19800000)/86400000);} // IST
 function grnFields(row){
-  if(!row.grn)return{fresh:false,grnDays:null};
+  if(!row.grn)return{stockAge:null};
   const days=todayDay()-row.grn;
-  return{fresh:days>=0&&days<=FRESH_DAYS,grnDays:days};
+  return{stockAge:days<0?null:(days<=FRESH_DAYS?'fresh':'old')};
+}
+// Total 60-day sales of every barcode in a style, per store (filled in buildIndexes)
+const styleSales = { hyderabad:{}, delhi:{}, pune:{}, mumbai:{} };
+// Saleable = the style (all its barcodes together) sold >0 in 60 days. No style ID -> the barcode's own sales.
+function saleableFlag(row,storeName){
+  const own=parseInt(row.sales)||0;
+  if(!row.style)return own>0;
+  const m=styleSales[(storeName||'').toLowerCase()];
+  return ((m&&m[row.style])||own)>0;
 }
 
 function parseCSVLean(text,info) {
@@ -115,13 +124,15 @@ async function fetchStore(storeKey) {
 }
 
 function buildIndexes(storeKey) {
-  const brands=new Set(),sizes=new Set(),tax={};
+  const brands=new Set(),sizes=new Set(),tax={},ss={};
   for (const row of cache[storeKey]) {
     if(row.brand)brands.add(row.brand); if(row.size)sizes.add(row.size);
+    if(row.style)ss[row.style]=(ss[row.style]||0)+(parseInt(row.sales)||0);
     const d=row.div||'(No Division)',s=row.sec||'(No Section)',p=row.dep||'(No Department)';
     if(!tax[d])tax[d]={}; if(!tax[d][s])tax[d][s]={}; if(!tax[d][s][p])tax[d][s][p]=new Set();
     if(row.brand)tax[d][s][p].add(row.brand);
   }
+  styleSales[storeKey]=ss;
   brandIndex[storeKey]=[...brands].sort((a,b)=>a.localeCompare(b));
   sizeIndex[storeKey]=[...sizes].sort((a,b)=>a.localeCompare(b));
   for(const d of Object.keys(tax))for(const s of Object.keys(tax[d]))for(const p of Object.keys(tax[d][s]))tax[d][s][p]=[...tax[d][s][p]].sort();
@@ -162,7 +173,7 @@ function fuzzyScore(query,target){
   let matched=0; for(const qt of qT)for(const tt of tT)if(tokenFuzzy(qt,tt)){matched++;break;}
   const r=matched/qT.length; if(r===1)return 80;if(r>=0.7)return 50;return 0;
 }
-function toCard(row,storeName){const[mrp,rsp]=(row.mrp||'').split('|');return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp,rsp:rsp||'',expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style,salesQty:parseInt(row.sales)||0,...grnFields(row)};}
+function toCard(row,storeName){const[mrp,rsp]=(row.mrp||'').split('|');return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp,rsp:rsp||'',expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style,salesQty:parseInt(row.sales)||0,saleable:saleableFlag(row,storeName),...grnFields(row)};}
 function hasStock(card){return(parseInt(card.storeStock)||0)>0||(parseInt(card.warehouseStock)||0)>0;}
 
 app.use(express.static(path.join(__dirname,'public')));
