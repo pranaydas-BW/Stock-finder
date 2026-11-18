@@ -14,13 +14,42 @@ const STORES = {
 };
 function csvUrl(gid) { return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`; }
 
-const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','RSP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department','Sales Qty (60D)']);
+const KEEP_COLS = new Set(['BARCODE','Brand','Vendor Article Name','Item Name','Size','MRP','RSP','Expiry Date','Ware house stock','Store stock','Style Group ID','Division','Section','Department','Sales Qty (60D)','First GRN Date']);
 const cache = { hyderabad:[], delhi:[], pune:[], mumbai:[], lastFetched:null, status:'empty' };
 const brandIndex = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
 const sizeIndex  = { hyderabad:[], delhi:[], pune:[], mumbai:[] };
 const taxIndex   = { hyderabad:{}, delhi:{}, pune:{}, mumbai:{} };
 
-function parseCSVLean(text) {
+// ── First GRN date parsing ─────────────────────────────────────────────────────
+const grnInfo = {};
+const FRESH_DAYS = 60;
+const GRN_MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function ymdToDay(y,m,d){
+  if(y<100)y+=2000;
+  if(y<2000||y>2100||m<1||m>12||d<1||d>31)return 0;
+  const t=Date.UTC(y,m-1,d);
+  if(new Date(t).getUTCMonth()!==m-1)return 0;
+  return Math.floor(t/86400000);
+}
+function parseGrnDate(s,mdy){
+  s=(s||'').trim(); if(!s)return 0;
+  let m;
+  if((m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/)))return ymdToDay(+m[1],+m[2],+m[3]);
+  if((m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/)))return mdy?ymdToDay(+m[3],+m[1],+m[2]):ymdToDay(+m[3],+m[2],+m[1]);
+  if((m=s.match(/^(\d{1,2})[\s\-\/]([A-Za-z]{3,9})[\s\-\/,]+(\d{2,4})/))){const mo=GRN_MONTHS[m[2].slice(0,3).toLowerCase()];return mo?ymdToDay(+m[3],mo,+m[1]):0;}
+  if((m=s.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{2,4})/))){const mo=GRN_MONTHS[m[1].slice(0,3).toLowerCase()];return mo?ymdToDay(+m[3],mo,+m[2]):0;}
+  if(/^\d{5}$/.test(s)){const n=+s;if(n>30000&&n<80000)return n-25569;}
+  return 0;
+}
+function todayDay(){return Math.floor((Date.now()+19800000)/86400000);} // IST
+function grnFields(row){
+  if(!row.grn)return{fresh:false,grnDays:null};
+  const days=todayDay()-row.grn;
+  return{fresh:days>=0&&days<=FRESH_DAYS,grnDays:days};
+}
+
+function parseCSVLean(text,info) {
+  info=info||{};
   // Replace newlines inside quoted fields with a space before splitting
   text = text.replace(/"[^"]*"/g, m => m.replace(/\n/g, ' '));
   const lines = text.split('\n'); if (lines.length < 2) return [];
@@ -39,7 +68,7 @@ function parseCSVLean(text) {
   const iName=idx['Item Name']??-1,iSize=idx['Size']??-1,iMRP=idx['MRP']??-1,iRSP=idx['RSP']??-1;
   const iExp=idx['Expiry Date']??-1,iWH=idx['Ware house stock']??-1,iFloor=idx['Store stock']??-1;
   const iStyle=idx['Style Group ID']??-1,iDiv=idx['Division']??-1,iSec=idx['Section']??-1,iDep=idx['Department']??-1;
-  const iSales=idx['Sales Qty (60D)']??-1;
+  const iSales=idx['Sales Qty (60D)']??-1,iGRN=idx['First GRN Date']??-1;
   const rows=[];
   for (let i=1;i<lines.length;i++) {
     const line=lines[i]; if(!line.trim())continue;
@@ -52,8 +81,26 @@ function parseCSVLean(text) {
       style:iStyle>=0?(v[iStyle]||'').trim():'',div:iDiv>=0?(v[iDiv]||'').trim():'',
       sec:iSec>=0?(v[iSec]||'').trim():'',dep:iDep>=0?(v[iDep]||'').trim():'',
       sales:iSales>=0?(v[iSales]||'0').trim():'0',
+      grn:iGRN>=0?(v[iGRN]||'').trim():'',
     });
   }
+  info.column=iGRN>=0;
+  let a=0,b=0,numeric=0;
+  for(const r of rows){
+    const mm=r.grn&&r.grn.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.]\d{2,4}/);
+    if(mm){numeric++;if(+mm[1]>a)a=+mm[1];if(+mm[2]>b)b=+mm[2];}
+  }
+  const mdy=a<=12&&b>12;
+  info.format=numeric?(mdy?'MM/DD/YYYY':(a>12?'DD/MM/YYYY':'DD/MM/YYYY (assumed, every date was ambiguous)')):'not numeric slash dates';
+  let parsed=0,blank=0,failed=0,fresh=0;const failedSamples=[],today=todayDay();
+  for(const r of rows){
+    const raw=r.grn;
+    if(!raw){blank++;r.grn=0;continue;}
+    const d=parseGrnDate(raw,mdy);
+    if(d){parsed++;r.grn=d;const age=today-d;if(age>=0&&age<=FRESH_DAYS)fresh++;}
+    else{failed++;r.grn=0;if(failedSamples.length<3)failedSamples.push(raw);}
+  }
+  info.parsed=parsed;info.blank=blank;info.failed=failed;info.freshRows=fresh;info.failedSamples=failedSamples;
   return rows;
 }
 
@@ -62,7 +109,7 @@ async function fetchStore(storeKey) {
   console.log(`[cache] Fetching ${label}...`);
   const res=await fetch(csvUrl(gid)); if(!res.ok)throw new Error(`HTTP ${res.status} for ${label}`);
   const fetchMs=Date.now()-t0; const text=await res.text(); const downloadMs=Date.now()-t0-fetchMs;
-  const rows=parseCSVLean(text); const parseMs=Date.now()-t0-fetchMs-downloadMs;
+  const info={};const rows=parseCSVLean(text,info);grnInfo[storeKey]=info;console.log('[grn] '+label+': '+JSON.stringify(info)); const parseMs=Date.now()-t0-fetchMs-downloadMs;
   console.log(`[cache] ${label}: ${rows.length} rows | fetch:${fetchMs}ms download:${downloadMs}ms parse:${parseMs}ms | heap:${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB`);
   return rows;
 }
@@ -115,11 +162,11 @@ function fuzzyScore(query,target){
   let matched=0; for(const qt of qT)for(const tt of tT)if(tokenFuzzy(qt,tt)){matched++;break;}
   const r=matched/qT.length; if(r===1)return 80;if(r>=0.7)return 50;return 0;
 }
-function toCard(row,storeName){const[mrp,rsp]=(row.mrp||'').split('|');return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp,rsp:rsp||'',expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style,salesQty:parseInt(row.sales)||0};}
+function toCard(row,storeName){const[mrp,rsp]=(row.mrp||'').split('|');return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp,rsp:rsp||'',expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style,salesQty:parseInt(row.sales)||0,...grnFields(row)};}
 function hasStock(card){return(parseInt(card.storeStock)||0)>0||(parseInt(card.warehouseStock)||0)>0;}
 
 app.use(express.static(path.join(__dirname,'public')));
-app.get('/api/status',(req,res)=>res.json({status:cache.status,lastFetched:cache.lastFetched,counts:{hyderabad:cache.hyderabad.length,delhi:cache.delhi.length,pune:cache.pune.length,mumbai:cache.mumbai.length},heapMB:Math.round(process.memoryUsage().heapUsed/1024/1024)}));
+app.get('/api/status',(req,res)=>res.json({status:cache.status,lastFetched:cache.lastFetched,counts:{hyderabad:cache.hyderabad.length,delhi:cache.delhi.length,pune:cache.pune.length,mumbai:cache.mumbai.length},heapMB:Math.round(process.memoryUsage().heapUsed/1024/1024),grn:grnInfo}));
 app.post('/api/refresh',(req,res)=>{refreshCache();res.json({ok:true});});
 app.get('/api/brands',(req,res)=>{const{store}=req.query;if(!store)return res.status(400).json({error:'Missing store.'});if(cache.status!=='ready')return res.status(503).json({error:'Data not ready.'});res.json({brands:brandIndex[store.toLowerCase()]||[]});});
 
