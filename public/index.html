@@ -73,6 +73,7 @@
   .badge { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
   .badge.green { background: #dcfce7; color: #16a34a; }
   .badge.red   { background: #fee2e2; color: #dc2626; }
+  .badge.sales { background: #eef2ff; color: #4338ca; }
   .badge.rsp   { background: #ede9fe; color: #5b21b6; font-size: 14px; }
   .style-btn { margin-left: auto; font-size: 12px; color: #6366f1; font-weight: 600; background: #eef2ff; border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
   .topstyle-detail { display: none; margin-top: 10px; flex-direction: column; gap: 8px; }
@@ -767,6 +768,7 @@ function renderCard(r,store){
     <div class="stock-row">
       <span class="badge ${f>0?'green':'red'}">Floor: ${f}</span>
       <span class="badge ${w>0?'green':'red'}">WH: ${w}</span>
+      <span class="badge sales">Sold (60D): ${r.salesQty||0}</span>
       ${styleBtn}
     </div></div>`;
 }
@@ -791,7 +793,7 @@ async function openStyleModal(styleId,store){
           </div>
         </div>
         <div class="card-meta">${r.barcode?`<span>📦 ${r.barcode}</span>`:''} ${r.size?`<span>📐 ${r.size}</span>`:''} ${r.mrp?`<span>₹${r.mrp} MRP</span>`:''} ${r.rsp?`<span class="badge rsp">₹${r.rsp} RSP</span>`:''}</div>
-        <div class="stock-row"><span class="badge ${f>0?'green':'red'}">Floor: ${f}</span><span class="badge ${w>0?'green':'red'}">WH: ${w}</span></div>
+        <div class="stock-row"><span class="badge ${f>0?'green':'red'}">Floor: ${f}</span><span class="badge ${w>0?'green':'red'}">WH: ${w}</span><span class="badge sales">Sold (60D): ${r.salesQty||0}</span></div>
       </div>`;
     }).join('');
   }catch(e){document.getElementById('styleModalBody').innerHTML=`<div class="error-msg">Error: ${e.message}</div>`;}
