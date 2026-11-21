@@ -47,3 +47,17 @@ npm install
 npm start
 # Open http://localhost:3000
 ```
+
+## Offers (from Promo Hub)
+
+Item cards show any offer that is live today for that barcode (or for the whole brand) in the city being searched.
+
+The data comes from Promo Hub's `offers` Supabase Edge Function. Set these in Render → Environment:
+
+| Variable | Value |
+|---|---|
+| `OFFERS_URL` | the `offers` function URL (`https://<project-ref>.supabase.co/functions/v1/offers`) |
+| `OFFERS_SECRET` | the same secret saved as `OFFERS_SECRET` in Supabase → Edge Functions → Secrets |
+| `OFFERS_ANON_KEY` | only if the function has "Verify JWT" on: the project's public anon key |
+
+Without `OFFERS_URL` and `OFFERS_SECRET` the feature is off and nothing else changes. The feed refreshes every 15 minutes; if it cannot be refreshed for 12 hours, offers are hidden rather than shown stale. `/api/status` shows the offers feed state (never the secret).

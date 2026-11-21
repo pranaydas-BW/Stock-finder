@@ -173,11 +173,64 @@ function fuzzyScore(query,target){
   let matched=0; for(const qt of qT)for(const tt of tT)if(tokenFuzzy(qt,tt)){matched++;break;}
   const r=matched/qT.length; if(r===1)return 80;if(r>=0.7)return 50;return 0;
 }
-function toCard(row,storeName){const[mrp,rsp]=(row.mrp||'').split('|');return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp,rsp:rsp||'',expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style,salesQty:parseInt(row.sales)||0,saleable:saleableFlag(row,storeName),...grnFields(row)};}
+// ── Offers from Promo Hub ─────────────────────────────────────────────────────
+// A small feed of offers that are live today, fetched from Promo Hub's `offers` function.
+// Needs OFFERS_URL and OFFERS_SECRET (set in Render). Without them this feature stays off and nothing else changes.
+// OFFERS_ANON_KEY is only needed if the function has "Verify JWT" switched on.
+const OFFERS_URL = process.env.OFFERS_URL || '';
+const OFFERS_SECRET = process.env.OFFERS_SECRET || '';
+const OFFERS_ANON_KEY = process.env.OFFERS_ANON_KEY || '';
+const OFFERS_REFRESH_MS = 15 * 60 * 1000;
+const OFFERS_MAX_AGE_MS = 12 * 60 * 60 * 1000; // if the feed can't be refreshed for 12h, show no offers rather than stale ones
+const offersState = { status: (OFFERS_URL && OFFERS_SECRET) ? 'empty' : 'disabled', offers: [], barcodes: new Map(), brands: new Map(), fetchedAt: null, error: null, stats: null };
+const normBrandKey = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const normBarcodeKey = s => (s || '').trim().replace(/\.0+$/, '');
+function istDate() { return new Date(Date.now() + 19800000).toISOString().slice(0, 10); }
+
+async function refreshOffers() {
+  if (offersState.status === 'disabled') return;
+  try {
+    const headers = { 'x-offers-secret': OFFERS_SECRET };
+    if (OFFERS_ANON_KEY) headers.Authorization = 'Bearer ' + OFFERS_ANON_KEY;
+    const res = await fetch(OFFERS_URL, { headers, timeout: 30000 });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (!d || !Array.isArray(d.offers) || !d.barcodes || typeof d.barcodes !== 'object' || !d.brands || typeof d.brands !== 'object') throw new Error('Unexpected response');
+    const offers = d.offers.map(o => ({ t: String((o && o.t) || ''), till: String((o && o.till) || ''), c: Array.isArray(o && o.c) ? o.c : [] }));
+    const toMap = obj => { const m = new Map(); for (const k of Object.keys(obj)) { const v = obj[k]; if (Array.isArray(v)) m.set(k, v); } return m; };
+    offersState.offers = offers; offersState.barcodes = toMap(d.barcodes); offersState.brands = toMap(d.brands);
+    offersState.fetchedAt = Date.now(); offersState.status = 'ready'; offersState.error = null; offersState.stats = d.stats || null;
+    console.log(`[offers] ${offers.length} offers | ${offersState.barcodes.size} barcodes | ${offersState.brands.size} brands`);
+  } catch (err) {
+    offersState.error = err.message; // keep whatever we already had; it is hidden automatically once too old
+    console.error('[offers] Refresh failed:', err.message);
+  }
+}
+
+// Offers for one inventory row in one city: barcode-specific ones plus brand-wide ones.
+function offersFor(row, storeKey) {
+  const st = offersState;
+  if (st.status !== 'ready' || !st.fetchedAt || Date.now() - st.fetchedAt > OFFERS_MAX_AGE_MS) return undefined;
+  const today = istDate(), out = [], seen = new Set();
+  const add = (idx, brandWide) => {
+    const o = st.offers[idx];
+    if (!o || !o.t || seen.has(idx) || !o.c.includes(storeKey)) return;
+    if (o.till && o.till < today) return; // ended since the feed was built
+    seen.add(idx); out.push({ text: o.t, till: o.till, brandWide });
+  };
+  const bc = normBarcodeKey(row.bc); if (bc) for (const i of (st.barcodes.get(bc) || [])) add(i, false);
+  const bk = normBrandKey(row.brand); if (bk) for (const i of (st.brands.get(bk) || [])) add(i, true);
+  return out.length ? out : undefined;
+}
+function offersSummary() {
+  return { enabled: offersState.status !== 'disabled', status: offersState.status, fetchedAt: offersState.fetchedAt ? new Date(offersState.fetchedAt) : null, offers: offersState.offers.length, barcodes: offersState.barcodes.size, brands: offersState.brands.size, error: offersState.error, stats: offersState.stats };
+}
+
+function toCard(row,storeName){const[mrp,rsp]=(row.mrp||'').split('|');return{barcode:row.bc,brand:row.brand,vendorArticleName:row.van,itemName:row.iname,size:row.size,mrp,rsp:rsp||'',expiryDate:row.exp,warehouseStock:row.wh,storeStock:row.floor,store:storeName,styleId:row.style,salesQty:parseInt(row.sales)||0,saleable:saleableFlag(row,storeName),...grnFields(row),offers:offersFor(row,String(storeName||'').toLowerCase())};}
 function hasStock(card){return(parseInt(card.storeStock)||0)>0||(parseInt(card.warehouseStock)||0)>0;}
 
 app.use(express.static(path.join(__dirname,'public')));
-app.get('/api/status',(req,res)=>res.json({status:cache.status,lastFetched:cache.lastFetched,counts:{hyderabad:cache.hyderabad.length,delhi:cache.delhi.length,pune:cache.pune.length,mumbai:cache.mumbai.length},heapMB:Math.round(process.memoryUsage().heapUsed/1024/1024),grn:grnInfo}));
+app.get('/api/status',(req,res)=>res.json({status:cache.status,lastFetched:cache.lastFetched,counts:{hyderabad:cache.hyderabad.length,delhi:cache.delhi.length,pune:cache.pune.length,mumbai:cache.mumbai.length},heapMB:Math.round(process.memoryUsage().heapUsed/1024/1024),grn:grnInfo,offers:offersSummary()}));
 app.post('/api/refresh',(req,res)=>{refreshCache();res.json({ok:true});});
 app.get('/api/brands',(req,res)=>{const{store}=req.query;if(!store)return res.status(400).json({error:'Missing store.'});if(cache.status!=='ready')return res.status(503).json({error:'Data not ready.'});res.json({brands:brandIndex[store.toLowerCase()]||[]});});
 
@@ -354,5 +407,6 @@ function startKeepAlive() {
 
 app.listen(PORT,async()=>{
   console.log(`Server on port ${PORT}`);
+  refreshOffers(); setInterval(refreshOffers, OFFERS_REFRESH_MS); // not awaited: never delays the inventory load
   await refreshCache(); scheduleDailyRefresh(); startKeepAlive();
 });
